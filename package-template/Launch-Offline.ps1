@@ -45,7 +45,15 @@ function Cleanup-Owned($state,[bool]$Analyze=$true) {
   New-Item -ItemType Directory -Path $state.Results -Force | Out-Null
   $runtime=Join-Path $archive 'ue4ss'
   if(Test-Path -LiteralPath $runtime){
-   Copy-Item -LiteralPath $runtime -Destination (Join-Path $state.Results 'runtime-copy') -Recurse -Force
+   # 2.4.3: the loader and mod DLLs are not copied into every session (about 28 MB per launch); their hashes are kept.
+   $base=(Get-Item -LiteralPath $runtime).FullName.TrimEnd('\','/');$copy=Join-Path $state.Results 'runtime-copy';$dlls=@()
+   foreach($file in Get-ChildItem -LiteralPath $base -Recurse -File){
+    $rel=$file.FullName.Substring($base.Length).TrimStart('\','/')
+    if($file.Extension -ieq '.dll'){$dlls+=[pscustomobject]@{Path=$rel;SHA256=(Get-AC8FileHash -LiteralPath $file.FullName).Hash;Bytes=$file.Length};continue}
+    $target=Join-Path $copy $rel;New-Item -ItemType Directory -Path (Split-Path $target -Parent) -Force | Out-Null
+    Copy-Item -LiteralPath $file.FullName -Destination $target -Force
+   }
+   ConvertTo-Json -InputObject $dlls | Set-Content -LiteralPath (Join-Path $state.Results 'runtime-dll-hashes.json') -Encoding UTF8
    $log=Join-Path $runtime 'UE4SS.log'
    if(Test-Path -LiteralPath $log){Copy-Item -LiteralPath $log -Destination (Join-Path $state.Results 'UE4SS.log') -Force}
   }

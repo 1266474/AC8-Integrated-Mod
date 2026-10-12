@@ -54,6 +54,12 @@ Pass 'residual recovery cancellation keeps existing files'
 if(Test-Path -LiteralPath $ue){throw 'Confirmed recovery did not clear owned directory'}
 if(!(Test-Path -LiteralPath (Join-Path $package 'cleanup-backups'))){throw 'Recovery backup absent'}
 Pass 'confirmed historical recovery integrated with setup helper'
+# 2.4.3: a session without flight records (flight_recording=0) skips the optional analysis before probing Python.
+$output=& {function Get-Command {param($Name,$ErrorAction) throw 'Python probed without flight records'};Invoke-AC8OptionalAnalysis $package $root} 6>&1 | Out-String
+if($output -notmatch 'flight_recording=0'){throw 'Session without flight records did not skip the analysis'}
+Pass 'session without flight records skips the optional analysis'
+$shadowFixture=Join-Path $root 'runtime-copy/Mods/AC8MouseAim/Logs';New-Item -ItemType Directory -Path $shadowFixture -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $shadowFixture 'Shadow-00001.csv') -Value 'kind,t_us' -Encoding ASCII
 $fakePython=Join-Path $root 'python-fake.cmd'
 @('@echo off','echo ModuleNotFoundError: No module named numpy 1>&2','exit /b 1') | Set-Content -LiteralPath $fakePython -Encoding ASCII
 $output=& {

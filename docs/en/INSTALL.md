@@ -64,6 +64,7 @@ Edit `MouseAim-Settings.ini` while the game is closed. These settings apply at t
 | `control_mode` | 0 | 0 = PEACE (CLASSIC 2.0), 3 = WAR; F4 switches during flight; legacy 1->0, 2/4/5->3 |
 | `sensitivity` | 0.10 | Mouse-direction sensitivity |
 | `hud_boresight` | 1 | Reference gun cross at the nose: 1 shown, 0 hidden; Alt+F7 toggles it in flight (this session only) |
+| `flight_recording` | 0 | 1 saves the FE/Shadow flight records of every flight (about 10-15 MB per minute, for diagnostics); 0 keeps the text log only. Also the launcher checkbox under maintenance; applied at the next launch |
 | `model_assist` | 1 | Enable model-based control |
 | `model_assist_strength` | 0.20 | Mixing scale for validated learned parameters; not a simple controller gain |
 | `hud_fps` | 120 | Target HUD submission rate, not guaranteed display FPS |
@@ -85,4 +86,4 @@ powershell.exe -NoProfile -ExecutionPolicy Bypass -File .\Run-Console.ps1 -Actio
 
 It checks the entry path without launching, staging, cleaning or saving settings. An unfinished session is reported rather than modified. Game-directory junctions and symbolic links are rejected consistently with cleanup. Concurrent operations must finish before another launch or cleanup starts.
 
-Python and NumPy are optional analysis dependencies. Missing dependencies do not prevent ordinary gameplay or cleanup. `sessions` may contain personal save backups; never share that directory in full. Keep the original release ZIP for sharing.
+Python and NumPy are optional analysis dependencies. Missing dependencies do not prevent ordinary gameplay or cleanup. `sessions` may contain personal save backups; never share that directory in full. Since 2.4.3 sessions no longer copy UE4SS.dll and the mod DLL; their hashes are recorded in `runtime-dll-hashes.json`. Keep the original release ZIP for sharing.

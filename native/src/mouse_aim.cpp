@@ -202,6 +202,8 @@ std::atomic<int> hud_target_hz{120},hud_renderer{1};
 std::atomic<bool> hud_connector{true},hud_link_always{false};
 // Reference gun cross: startup value from hud_boresight, Alt+F7 toggles it for the session.
 std::atomic<bool> hud_boresight{true};
+// Flight recording (2.4.3): FE trace + Shadow CSV only when flight_recording=1 (launcher checkbox); read at startup.
+std::atomic<bool> flight_recording{false};
 std::atomic<uint64_t> boresight_notice_until{0};
 std::atomic<float> hud_opacity{.65f};
 wchar_t module_folder[MAX_PATH]{};
@@ -272,6 +274,7 @@ void load_config() {
     hud_renderer.store(std::clamp(read_config_int(L"hud_renderer",3),0,3));
     hud_connector.store(read_config_int(L"hud_connector",1)!=0);
     hud_link_always.store(read_config_int(L"hud_link_always",0)!=0);
+    flight_recording.store(read_config_int(L"flight_recording",0)!=0);
     hud_boresight.store(read_config_int(L"hud_boresight",1)!=0);log_line("HUD_BORESIGHT startup=%d (hud_boresight; Alt+F7 toggles)",hud_boresight.load()?1:0);
     hud_opacity.store(std::clamp(read_config_float(L"hud_opacity",.65f),.15f,1.f));
     config.sensitivity = std::clamp(read_config_float(L"sensitivity", config.sensitivity), 0.01f, 1.0f);
@@ -957,7 +960,7 @@ extern "C" __declspec(dllexport) int ac8_mouseaim_start(lua_State* state) {
     }
     load_config();
     log_line("CAMERA_SETTINGS mode=%d distance_m=%.1f height_m=%.1f F3=toggle; mission/cinematic recenter enabled",camera_view_mode.load(),camera_distance_cm.load()/100,camera_height_cm.load()/100);
-    log_line("PROFILE 2.4.2 WAR=13.8 HUD=GUNCROSS-TOGGLE+HMD-FREELOOK KEY-TAKEOVER-SEED LEVEL-REARM PEACE-BANK-GOAL WAR=FE-EXACT-WT PATH-LOCK QUINTIC-LEVEL IDLE-GATE-LEVEL ROLL-PREDICT-NEAR AIM-WINDOW CAMERA-FAULT-RETRY HIL-TUNED WT-LEVEL WT-OVERRIDE WAR-DEGRADED=V11.1 PEACE-WAR-CYCLE CONTROL default_mode=%d sensitivity=%.4f hud_target_hz=%d reference_fov=%.1f braking=%.2f",control_mode.load(),config.sensitivity,hud_target_hz.load(),config.mouse_reference_fov,config.arrival_braking);
+    log_line("PROFILE 2.4.3 WAR=13.8 HUD=GUNCROSS-TOGGLE+HMD-FREELOOK KEY-TAKEOVER-SEED FLIGHT-REC-OPT LEVEL-REARM PEACE-BANK-GOAL WAR=FE-EXACT-WT PATH-LOCK QUINTIC-LEVEL IDLE-GATE-LEVEL ROLL-PREDICT-NEAR AIM-WINDOW CAMERA-FAULT-RETRY HIL-TUNED WT-LEVEL WT-OVERRIDE WAR-DEGRADED=V11.1 PEACE-WAR-CYCLE CONTROL default_mode=%d sensitivity=%.4f hud_target_hz=%d reference_fov=%.1f braking=%.2f",control_mode.load(),config.sensitivity,hud_target_hz.load(),config.mouse_reference_fov,config.arrival_braking);
     if (!prepare_hook()) return 0;
     install_native_camera();
     helmet::install();
@@ -966,7 +969,8 @@ extern "C" __declspec(dllexport) int ac8_mouseaim_start(lua_State* state) {
     } else {
         log_line("warning raw input hook unavailable; using DirectInput fallback");
     }
-    shadow_start();
+    if(flight_recording.load()){shadow_start();fe_runtime::trace_enabled=true;log_line("FLIGHT_RECORDING on: FE and Shadow CSV in Logs (flight_recording=1)");}
+    else log_line("FLIGHT_RECORDING off: no FE/Shadow CSV (flight_recording=0); this text log only");
     running.store(true);
     std::thread(mouse_loop).detach();
     std::thread(overlay_loop).detach();

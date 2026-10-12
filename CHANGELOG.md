@@ -1,3 +1,10 @@
+## 2.4.3
+
+- Flight-record switch: launcher checkbox (maintenance) / `flight_recording` in MouseAim-Settings.ini, off by default. Off: no FE trace and no Shadow CSV (the recorder is not armed), the optional analysis is skipped; the text log is kept. Applied at the next launch.
+- Sessions record UE4SS.dll and the mod DLL by hash (`runtime-dll-hashes.json`) instead of copying them (about 28 MB per launch).
+- Launcher: F2 HMD description matches the bracketed ring. Flight control unchanged from 2.4.2.
+- Tests: Test-MouseSettings (flight_recording, launcher in-place edit), Test-Cleanup (session archive without DLL copies), Test-InstallUX (analysis skip), hud_reference_tests (recording off by default).
+
 ## 2.4.2
 
 - Fix: WAR keyboard takeover lag. A held key now takes over once the stock key ramp reaches 0.3 (about 0.1-0.15 s; was 0.8, 0.27-0.51 s), and the taken-over channel continues from the key ramp instead of re-ramping from the instructor's last command (never pulling back a command already in the key's direction). Reversing a held key keeps the keys in control. Hand-back about 0.1 s after release (at 0.8) and the WT ownership grouping are unchanged.

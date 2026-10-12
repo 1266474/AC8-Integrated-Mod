@@ -85,6 +85,9 @@ function Get-AC8ConsoleBanner([string]$PackageRoot,$Validation) {
  return [pscustomobject]@{Title=$title;Keys=$keys;Ready=$ready}
 }
 function Invoke-AC8OptionalAnalysis([string]$PackageRoot,[string]$Session) {
+ if(!@(Get-ChildItem -LiteralPath (Join-Path $Session 'runtime-copy/Mods/AC8MouseAim/Logs') -Filter 'Shadow-*.csv' -File -ErrorAction SilentlyContinue).Count){
+  Write-Host '未保存飞行记录（flight_recording=0），已跳过可选分析。文字日志已保留。';return
+ }
  $python=Get-Command python.exe -ErrorAction SilentlyContinue
  if(!$python -or $python.Source -match '[\\/]WindowsApps[\\/]'){
   Write-Host '已跳过可选分析：未找到可用 Python。普通游玩不需要安装 Python 或 NumPy。';return

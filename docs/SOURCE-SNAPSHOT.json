@@ -1,7 +1,7 @@
 {
-  "source_version": "2.4.2",
-  "snapshot_date": "2026-10-09",
-  "native_sha256": "E47F61923303B1A50E233D788F74490BA84F9AF946A45FCFB2CCAE4F4B14FF57",
+  "source_version": "2.4.3",
+  "snapshot_date": "2026-10-12",
+  "native_sha256": "412D157B20CA2C4EE290DADAD6BC255F2FE1460144EB0BC6FF9A37402A2164FB",
   "note": "source/MouseAim is the complete public source of the shipped DLL (build.cmd); test.cmd runs 24 native suites, test-gpu.cmd the GPU HUD test; lua/tests holds the offline HUD/HMD script tests. Extracted game data and research tooling are not included.",
   "files": [
     {
@@ -58,7 +58,7 @@
     },
     {
       "path": "source/MouseAim/hud_reference_tests.cpp",
-      "sha256": "80a6951e285d4c335caddc613b373460cc361a513f5984017f86c4a46a521e36"
+      "sha256": "70bd3e6e1f3e00a27e539ce41855c9b07e380ff59e15ccef4c51998b323f77cd"
     },
     {
       "path": "source/MouseAim/hybrid_hud_tests.cpp",
@@ -198,7 +198,7 @@
     },
     {
       "path": "source/MouseAim/src/fe_runtime.h",
-      "sha256": "3d172b58d7b954a3c294398dbaa72ae311a5b4e97650eb6e21fc8aeacffdf757"
+      "sha256": "b6edf74c0d98e840c64154fbf3bacdd3e1f15f0ca3dffb7a67b2e8bc7c428231"
     },
     {
       "path": "source/MouseAim/src/flight_math.h",
@@ -258,7 +258,7 @@
     },
     {
       "path": "source/MouseAim/src/manual_takeover.h",
-      "sha256": "069fc86017552ac5d5935d91a541e2e91593fb171f1363e56774ece60cc9f59e"
+      "sha256": "acaac4d34a4c761abad58210c6037bebba64730ce760bb9a29d994290099387c"
     },
     {
       "path": "source/MouseAim/src/model_control.h",
@@ -274,7 +274,7 @@
     },
     {
       "path": "source/MouseAim/src/mouse_aim.cpp",
-      "sha256": "43aee8fbe34b3df0a5d64859b2b18ec55f149a52ec857cc59c76e5fa45ef16de"
+      "sha256": "a43cc64f170e022b47e7899b578bf0d15e76fd01cbf3fd4e2223f87573d1334d"
     },
     {
       "path": "source/MouseAim/src/native_camera.h",
@@ -450,7 +450,7 @@
     },
     {
       "path": "source/MouseAim/takeover_logic_tests.cpp",
-      "sha256": "0c7c2e81cb5b64dff65aa90f34d2be209aac8a7f7fef754669a8b204a24d9266"
+      "sha256": "787464a7bdf88656b7ccfcd2bf0a4bfdd5d6ed315977b27ead44ba6b60f0cea6"
     },
     {
       "path": "source/MouseAim/test-gpu.cmd",

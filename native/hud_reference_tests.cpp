@@ -52,4 +52,10 @@ int main(){
  assert(f7_action(true,true,true,false)==F7Action::None&&f7_action(true,true,false,true)==F7Action::None);
  for(int m=0;m<8;++m)assert(f7_action(false,m&1,m&2,m&4)==F7Action::None);
  puts("PASS gun cross shown by default; F7 = HUD (Ctrl/Shift allowed), Alt+F7 = gun cross only, Alt+Ctrl/Shift ignored");
+ // 9. 2.4.3 flight recording: off by default (no Shadow recorder, no FE trace rows queued) until flight_recording=1
+ assert(!flight_recording.load()&&!fe_runtime::trace_enabled.load()&&!shadow_armed.load());
+ fe_runtime::Record rec{};fe_runtime::trace_push(rec);assert(fe_runtime::trace_size==0);
+ fe_runtime::trace_enabled=true;fe_runtime::trace_push(rec);assert(fe_runtime::trace_size==1);
+ fe_runtime::trace_enabled=false;fe_runtime::trace_size=0;
+ puts("PASS flight recording off by default: no Shadow recorder, FE trace rows dropped until enabled");
 }

@@ -7,6 +7,7 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 . (Join-Path $PSScriptRoot 'Gui-Core.ps1')
 . (Join-Path $PSScriptRoot 'CreeperUX-Theme.ps1')
 . (Join-Path $PSScriptRoot 'Keybindings-GUI.ps1')
+. (Join-Path $PSScriptRoot 'MouseAim-Settings.ps1')
 $reader=New-Object System.Xml.XmlNodeReader ([xml](Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Launcher-GUI.xaml') -Raw -Encoding UTF8))
 $window=[Windows.Markup.XamlReader]::Load($reader)
 # Fit the initial window to the available desktop; the content scales down instead of scrolling.
@@ -18,7 +19,7 @@ $window.Height=[Math]::Min($window.Height,[Math]::Max($window.MinHeight,$workAre
 $script:themeMode=$Theme
 Set-CreeperUXTheme $window $script:themeMode
 $script:controls=@{}
-foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Save','Start','CopyOption','LaunchOption','Recover','OpenLogs','StatusTitle','StatusMessage','StatusCard','BusyBar','PreviewRoot','ThemeToggle','StatusMark','ModeDescription','Detect','GameCandidates','SteamCandidates','PackageVersion','DisableMod','EnableMod','Keybindings'){$script:controls[$name]=$window.FindName($name)}
+foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Save','Start','CopyOption','LaunchOption','Recover','OpenLogs','StatusTitle','StatusMessage','StatusCard','BusyBar','PreviewRoot','ThemeToggle','StatusMark','ModeDescription','Detect','GameCandidates','SteamCandidates','PackageVersion','DisableMod','EnableMod','Keybindings','FlightRecording'){$script:controls[$name]=$window.FindName($name)}
 $script:worker=$null;$script:async=$null;$script:option=''
 $infoPath=Join-Path $PSScriptRoot 'package-info.json'
 if(Test-Path -LiteralPath $infoPath){
@@ -33,7 +34,7 @@ function Set-AC8GuiStatus([string]$Title,[string]$Message,[bool]$Success=$true){
  $script:controls.StatusMark.SetResourceReference([Windows.Controls.Border]::BackgroundProperty,$key)
 }
 function Set-AC8GuiBusy([bool]$Busy){
- foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Detect','Save','Start','Recover','GameCandidates','SteamCandidates','DisableMod','EnableMod','Keybindings'){$script:controls[$name].IsEnabled=!$Busy}
+ foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Detect','Save','Start','Recover','GameCandidates','SteamCandidates','DisableMod','EnableMod','Keybindings','FlightRecording'){$script:controls[$name].IsEnabled=!$Busy}
  $script:controls.BusyBar.IsIndeterminate=[Windows.SystemParameters]::ClientAreaAnimation
  $script:controls.BusyBar.Value=50
  $script:controls.BusyBar.Visibility=if($Busy){'Visible'}else{'Collapsed'}
@@ -121,6 +122,17 @@ $script:controls.SteamCandidates.Add_SelectionChanged({
 $script:controls.DisableMod.Add_Click({Start-Process -FilePath (Join-Path $PSScriptRoot 'Disable-Mod.cmd') -WindowStyle Normal})
 $script:controls.EnableMod.Add_Click({Start-Process -FilePath (Join-Path $PSScriptRoot 'Enable-Mod.cmd') -WindowStyle Normal})
 $script:controls.Keybindings.Add_Click({try{$saved=Show-AC8KeybindingsDialog $PSScriptRoot $window $script:themeMode;if($saved){Set-AC8GuiStatus '键位已保存' '自由观察、放大和手动接管键在下次启动生效；请同步核对游戏操纵绑定。'}}catch{Set-AC8GuiStatus '键位设置未打开' $_.Exception.Message $false}})
+# Flight recording (2.4.3): flight_recording in MouseAim-Settings.ini, applied at the next launch.
+$script:settingsPath=Join-Path $PSScriptRoot 'MouseAim-Settings.ini'
+try{$script:controls.FlightRecording.IsChecked=((Read-MouseSettings $script:settingsPath).flight_recording -eq 1)}catch{$script:controls.FlightRecording.IsEnabled=$false}
+$script:controls.FlightRecording.Add_Click({
+ $on=[bool]$script:controls.FlightRecording.IsChecked
+ try{
+  Set-MouseSettingValue $script:settingsPath 'flight_recording' $(if($on){'1'}else{'0'})
+  if($on){Set-AC8GuiStatus '已开启飞行记录' '下次启动生效。每次飞行会在 sessions 中保存 FE／Shadow 记录（约 10–15 MB／分钟），用于问题分析。'}
+  else{Set-AC8GuiStatus '已关闭飞行记录' '下次启动生效。只保留文字日志，不再保存 FE／Shadow 记录。'}
+ }catch{$script:controls.FlightRecording.IsChecked=!$on;Set-AC8GuiStatus '设置未保存' $_.Exception.Message $false}
+})
 $script:controls.Save.Add_Click({Start-AC8GuiWork 'Save'})
 $script:controls.Start.Add_Click({Start-AC8GuiWork 'Start'})
 $script:controls.Recover.Add_Click({

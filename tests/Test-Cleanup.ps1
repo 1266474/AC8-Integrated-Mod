@@ -85,6 +85,27 @@ if(Test-Path -LiteralPath (Join-Path $package 'active-session.json')){throw 'Mis
 Pass 'actual launcher cleanup retires state before missing-save diagnostics'
 if(Test-Path -LiteralPath $f.State.Results){throw 'Invalid diagnostics destination was created'}
 Pass 'invalid session diagnostics path is not written'
+# 2.4.3: the session archive keeps the runtime's logs and settings but records the DLLs by hash instead of copying them.
+$f=New-Fixture 'session-archive';$package=Join-Path (Split-Path $f.Game -Parent) 'package'
+New-Item -ItemType Directory -Path $package | Out-Null
+foreach($n in 'PowerShell-Compat.ps1','Launch-Offline.ps1','Cleanup-Core.ps1','Install-Common.ps1'){Copy-Item -LiteralPath (Join-Path $repo ('package-template/'+$n)) -Destination $package}
+Set-Content -LiteralPath (Join-Path $package 'game-path.txt') -Value $f.Game -Encoding UTF8
+$modDir=Join-Path $f.UE 'Mods/AC8MouseAim';New-Item -ItemType Directory -Path (Join-Path $modDir 'Scripts'),(Join-Path $modDir 'Logs') -Force | Out-Null
+Set-Content -LiteralPath (Join-Path $f.UE 'UE4SS.dll') -Value 'fixture runtime dll'
+Set-Content -LiteralPath (Join-Path $modDir 'Scripts/ac8_mouse_aim_010.dll') -Value 'fixture mod dll'
+Set-Content -LiteralPath (Join-Path $modDir 'Logs/MouseAim-00001.log') -Value 'fixture log'
+$dllHash=(Get-FileHash -LiteralPath (Join-Path $modDir 'Scripts/ac8_mouse_aim_010.dll')).Hash
+$f.State.Results=Join-Path $package 'sessions/20261012-000000-fixture'
+$f.State | ConvertTo-Json -Depth 5 | Set-Content -LiteralPath (Join-Path $package 'active-session.json') -Encoding UTF8
+$before=$env:LOCALAPPDATA
+try{$env:LOCALAPPDATA=Join-Path $root 'nonexistent-saves'; & (Join-Path $package 'Launch-Offline.ps1') -CleanupOnly | Out-Null}finally{$env:LOCALAPPDATA=$before}
+Assert-Clean $f
+$copy=Join-Path $f.State.Results 'runtime-copy'
+if(!(Test-Path -LiteralPath (Join-Path $copy 'Mods/AC8MouseAim/Logs/MouseAim-00001.log')) -or !(Test-Path -LiteralPath (Join-Path $copy 'sample.txt'))){throw 'Session archive lost runtime logs'}
+if(@(Get-ChildItem -LiteralPath $copy -Recurse -File -Filter '*.dll').Count){throw 'Session archive still copies DLLs'}
+$parsed=Get-Content -LiteralPath (Join-Path $f.State.Results 'runtime-dll-hashes.json') -Raw | ConvertFrom-Json;$hashes=@($parsed)   # PS 5.1: assign first, @() of the pipeline would nest the array
+if($hashes.Count -ne 2 -or @($hashes | Where-Object {$_.Path -like '*ac8_mouse_aim_010.dll' -and $_.SHA256 -eq $dllHash}).Count -ne 1){throw 'DLL hashes not recorded'}
+Pass 'session archive keeps logs, records DLL hashes instead of DLL copies'
 # On Windows a junction requires no developer mode or symlink privilege.
 $f=New-Fixture 'junction';$outside=Join-Path $root 'outside';New-Item -ItemType Directory -Path $outside | Out-Null
 Set-Content -LiteralPath (Join-Path $outside 'keep.txt') -Value 'keep'
