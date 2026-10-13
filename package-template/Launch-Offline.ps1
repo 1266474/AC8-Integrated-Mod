@@ -117,7 +117,8 @@ $stage='准备加载器'
 try {
  New-Item -ItemType Directory -Path (Join-Path $w64 'ue4ss') | Out-Null
  Set-Content -LiteralPath (Join-Path $w64 'ue4ss/AC8SourceInit-owner.txt') -Value $id -Encoding ASCII
- Install-SelectedUE4SS (Join-Path $payload 'ue4ss') (Join-Path $w64 'ue4ss') $features
+ $extraMods=@(Get-AC8ExtraMods $root)
+ Install-SelectedUE4SS (Join-Path $payload 'ue4ss') (Join-Path $w64 'ue4ss') $features $extraMods
  Apply-MouseSettings $mouseSettings (Join-Path $w64 'ue4ss/Mods/AC8MouseAim')
  . (Join-Path $root 'Keybinding-Settings.ps1')
  $bindings=Read-AC8Keybindings (Join-Path $root 'Keybindings.ini')
@@ -132,6 +133,9 @@ try {
  Write-Host $banner.Title
  Write-Host $banner.Keys
  Write-Host ('FEATURES: mouse flight; missile mode='+$features.MissileMode)
+ $usableExtra=@($extraMods | Where-Object {!$_.Problem})
+ if($extraMods.Count){Write-Host ('EXTRA UE4SS MODS (ue4ss-mods): '+$(if($usableExtra.Count){($usableExtra | ForEach-Object {$_.Name+' ['+$_.Kind+']'}) -join ', '}else{'none loaded'}))}
+ foreach($skipped in @($extraMods | Where-Object {$_.Problem})){Write-Host ('  skipped '+$skipped.Name+': '+$skipped.Problem) -ForegroundColor Yellow}
  $stage='启动游戏'
  $game=Start-Process -FilePath $exe -WorkingDirectory $w64 -WindowStyle Normal -PassThru
  $state.PID=$game.Id

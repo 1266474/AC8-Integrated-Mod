@@ -3,6 +3,7 @@
 [简体中文](../LIMITATIONS.md) | **English** · [English home](../../README.en.md)
 
 - Only the pinned game build and UE4SS ABI are supported. A game update can cause version validation to refuse launch.
+- Other UE4SS mods go into the package's `ue4ss-mods` folder and must be compatible with the bundled UE4SS build; do not install a separate UE4SS into the game folder (see docs/EXTRA-MODS.md, Chinese).
 - v2.4.3 is the current stable release. WAR has been flown on several aircraft, but not every computer, mission, aircraft or binding configuration is covered.
 - The independent-axis model does not fully model aerodynamic coupling, angle of attack, G-loads, stalls or energy management. (This applies to PEACE; WAR uses a reconstructed model of the game's rotation law but does not change aircraft performance.)
 - Learning is not guaranteed for every axis or flight and does not persist between game processes. Validated speed-range coverage is incomplete.

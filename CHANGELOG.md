@@ -1,5 +1,6 @@
 ## 2.4.3
 
+- Other UE4SS mods: folders in the package's `ue4ss-mods` are validated (standard layout, name, no links, not reserved; `_` prefix disables) and deployed/enabled after this package's mods on every launch, removed with the runtime afterwards. Launcher button "附加 Mod" opens the folder and reports what loads; the console lists it. Bundles the UE4SS `shared` library (UEHelpers) of the same build. docs/EXTRA-MODS.md.
 - Flight-record switch: launcher checkbox (maintenance) / `flight_recording` in MouseAim-Settings.ini, off by default. Off: no FE trace and no Shadow CSV (the recorder is not armed), the optional analysis is skipped; the text log is kept. Applied at the next launch.
 - Sessions record UE4SS.dll and the mod DLL by hash (`runtime-dll-hashes.json`) instead of copying them (about 28 MB per launch).
 - Launcher: F2 HMD description matches the bracketed ring. Flight control unchanged from 2.4.2.

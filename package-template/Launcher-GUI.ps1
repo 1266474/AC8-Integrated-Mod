@@ -19,7 +19,7 @@ $window.Height=[Math]::Min($window.Height,[Math]::Max($window.MinHeight,$workAre
 $script:themeMode=$Theme
 Set-CreeperUXTheme $window $script:themeMode
 $script:controls=@{}
-foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Save','Start','CopyOption','LaunchOption','Recover','OpenLogs','StatusTitle','StatusMessage','StatusCard','BusyBar','PreviewRoot','ThemeToggle','StatusMark','ModeDescription','Detect','GameCandidates','SteamCandidates','PackageVersion','DisableMod','EnableMod','Keybindings','FlightRecording'){$script:controls[$name]=$window.FindName($name)}
+foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Save','Start','CopyOption','LaunchOption','Recover','OpenLogs','StatusTitle','StatusMessage','StatusCard','BusyBar','PreviewRoot','ThemeToggle','StatusMark','ModeDescription','Detect','GameCandidates','SteamCandidates','PackageVersion','DisableMod','EnableMod','Keybindings','FlightRecording','ExtraMods'){$script:controls[$name]=$window.FindName($name)}
 $script:worker=$null;$script:async=$null;$script:option=''
 $infoPath=Join-Path $PSScriptRoot 'package-info.json'
 if(Test-Path -LiteralPath $infoPath){
@@ -34,7 +34,7 @@ function Set-AC8GuiStatus([string]$Title,[string]$Message,[bool]$Success=$true){
  $script:controls.StatusMark.SetResourceReference([Windows.Controls.Border]::BackgroundProperty,$key)
 }
 function Set-AC8GuiBusy([bool]$Busy){
- foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Detect','Save','Start','Recover','GameCandidates','SteamCandidates','DisableMod','EnableMod','Keybindings','FlightRecording'){$script:controls[$name].IsEnabled=!$Busy}
+ foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Detect','Save','Start','Recover','GameCandidates','SteamCandidates','DisableMod','EnableMod','Keybindings','FlightRecording','ExtraMods'){$script:controls[$name].IsEnabled=!$Busy}
  $script:controls.BusyBar.IsIndeterminate=[Windows.SystemParameters]::ClientAreaAnimation
  $script:controls.BusyBar.Value=50
  $script:controls.BusyBar.Visibility=if($Busy){'Visible'}else{'Collapsed'}
@@ -132,6 +132,17 @@ $script:controls.FlightRecording.Add_Click({
   if($on){Set-AC8GuiStatus '已开启飞行记录' '下次启动生效。每次飞行会在 sessions 中保存 FE／Shadow 记录（约 10–15 MB／分钟），用于问题分析。'}
   else{Set-AC8GuiStatus '已关闭飞行记录' '下次启动生效。只保留文字日志，不再保存 FE／Shadow 记录。'}
  }catch{$script:controls.FlightRecording.IsChecked=!$on;Set-AC8GuiStatus '设置未保存' $_.Exception.Message $false}
+})
+# Extra UE4SS mods (2.4.3): open package\ue4ss-mods and report what the next launch will load.
+$script:controls.ExtraMods.Add_Click({
+ try{
+  $folder=Join-Path $PSScriptRoot 'ue4ss-mods';if(!(Test-Path -LiteralPath $folder)){New-Item -ItemType Directory -Path $folder | Out-Null}
+  $found=@(Get-AC8ExtraMods $PSScriptRoot);$ok=@($found | Where-Object {!$_.Problem});$bad=@($found | Where-Object {$_.Problem})
+  $message=if($ok.Count){'下次启动将随本包加载：'+(($ok | ForEach-Object {$_.Name+'（'+$_.Kind+'）'}) -join '、')+'。'}else{'把其他 UE4SS Mod 的文件夹放进打开的 ue4ss-mods，下次启动随本包加载。'}
+  if($bad.Count){$message+=' 已跳过：'+(($bad | ForEach-Object {$_.Name+'（'+$_.Problem+'）'}) -join '、')+'。'}
+  Set-AC8GuiStatus ('附加 Mod：'+$ok.Count+' 个可加载') $message
+  Start-Process -FilePath (Join-Path $env:SystemRoot 'explorer.exe') -ArgumentList ('"'+$folder+'"')
+ }catch{Set-AC8GuiStatus '附加 Mod 文件夹未打开' $_.Exception.Message $false}
 })
 $script:controls.Save.Add_Click({Start-AC8GuiWork 'Save'})
 $script:controls.Start.Add_Click({Start-AC8GuiWork 'Start'})

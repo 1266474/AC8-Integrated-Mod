@@ -2,7 +2,7 @@
 
 Stable release. **Offline single-player only; do not use online or in multiplayer.**
 
-**2.4.3:** a "save flight records" switch in the launcher (maintenance; off by default), and sessions no longer copy the DLLs, saving about 30-230 MB per launch. **2.4.2:** fixes the keyboard-takeover lag in WAR: a held pitch, roll or yaw key takes over after about 0.1-0.15 s and responds essentially like the stock keys. Since 2.4.1 the nose reference gun cross can be switched with **Alt+F7**, and `hud_boresight` in MouseAim-Settings.ini sets its startup state.
+**2.4.3:** other UE4SS mods can be used alongside: put them in the package's `ue4ss-mods` folder and they load with this package's UE4SS; a "save flight records" switch in the launcher (maintenance; off by default), and sessions no longer copy the DLLs, saving about 30-230 MB per launch. **2.4.2:** fixes the keyboard-takeover lag in WAR: a held pitch, roll or yaw key takes over after about 0.1-0.15 s and responds essentially like the stock keys. Since 2.4.1 the nose reference gun cross can be switched with **Alt+F7**, and `hud_boresight` in MouseAim-Settings.ini sets its startup state.
 
 The mouse sets a direction and the mod coordinates the aircraft's attitude to fly to the ring. **F4** toggles two flight controllers:
 - **PEACE** (default): the unchanged CLASSIC 2.0;

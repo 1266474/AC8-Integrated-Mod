@@ -1,9 +1,14 @@
-# v2.4.3 — 飞行记录开关
+# v2.4.3 — 附加 UE4SS Mod 与飞行记录开关
 
 **正式版。仅限离线单人，禁止带 Mod 进入线上或多人模式。** 本版包含 v2.4.2 的全部内容，飞控与 v2.4.2 相同。
 
 ## 更新内容
 
+- **与其他 UE4SS Mod 一起使用**：
+  - 把其他 UE4SS Mod 的文件夹放进整合包的 `ue4ss-mods`，每次启动随本包的 UE4SS 一起部署并启用，退出后一起移走，原件保留。
+  - 启动器“维护与恢复”新增“附加 Mod”按钮：打开该文件夹，并显示下次启动会加载哪些 Mod、哪些被跳过及原因；控制台也会列出。
+  - 附带同版本 UE4SS 的 `shared` 库（UEHelpers）。文件夹名以 `_` 开头即停用。
+  - 其他 Mod 需要兼容本包的 UE4SS 版本；蓝图类 Mod 需要自行放入 BPModLoaderMod。详见 [与其他 UE4SS Mod 一起使用](EXTRA-MODS.md)。
 - **飞行记录开关**：
   - 启动器“维护与恢复”中新增“保存飞行记录”勾选框，对应 `MouseAim-Settings.ini` 的 `flight_recording`，下次启动生效。
   - **默认关闭**：只保留很小的文字日志。开启后，每次飞行会在 sessions 中保存 FE／Shadow 记录（约 10–15 MB／分钟，单次最多约 200 MB），用于问题分析。
@@ -24,6 +29,7 @@
 
 **Stable release. Offline single-player only.** Contains everything from v2.4.2; flight control is unchanged.
 
+- **Other UE4SS mods.** Put their folders in the package's `ue4ss-mods`; they are deployed and enabled with this package's UE4SS on every launch and removed with it afterwards (the originals stay). The launcher's "附加 Mod" button opens the folder and lists what the next launch loads or skips; the console lists them too. The UE4SS `shared` library (UEHelpers) of the same build is included; a folder name starting with `_` disables a mod. Mods must be compatible with the bundled UE4SS build; Blueprint (LogicMods) mods need BPModLoaderMod added by the player.
 - **Flight-record switch.**
   - A "save flight records" checkbox in the launcher (maintenance), stored as `flight_recording` in MouseAim-Settings.ini and applied at the next launch.
   - **Off by default**: only the small text log is kept. When on, every flight saves FE/Shadow records in sessions (about 10-15 MB per minute, at most about 200 MB per flight) for diagnostics.

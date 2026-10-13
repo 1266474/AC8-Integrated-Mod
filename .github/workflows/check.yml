@@ -53,6 +53,8 @@ jobs:
         shell: powershell
       - run: .\tests\Test-ConsoleBanner.ps1
         shell: powershell
+      - run: .\tests\Test-ExtraMods.ps1
+        shell: powershell
 
       - name: Build and check the fixed English supplement
         shell: powershell
