@@ -8,6 +8,8 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 . (Join-Path $PSScriptRoot 'CreeperUX-Theme.ps1')
 . (Join-Path $PSScriptRoot 'Keybindings-GUI.ps1')
 . (Join-Path $PSScriptRoot 'MouseAim-Settings.ps1')
+# Player data: the package folder when portable, <install>\data for the installed app (2.5.0).
+$script:dataRoot=Get-AC8DataRoot $PSScriptRoot
 $reader=New-Object System.Xml.XmlNodeReader ([xml](Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Launcher-GUI.xaml') -Raw -Encoding UTF8))
 $window=[Windows.Markup.XamlReader]::Load($reader)
 # Fit the initial window to the available desktop; the content scales down instead of scrolling.
@@ -121,9 +123,9 @@ $script:controls.SteamCandidates.Add_SelectionChanged({
 })
 $script:controls.DisableMod.Add_Click({Start-Process -FilePath (Join-Path $PSScriptRoot 'Disable-Mod.cmd') -WindowStyle Normal})
 $script:controls.EnableMod.Add_Click({Start-Process -FilePath (Join-Path $PSScriptRoot 'Enable-Mod.cmd') -WindowStyle Normal})
-$script:controls.Keybindings.Add_Click({try{$saved=Show-AC8KeybindingsDialog $PSScriptRoot $window $script:themeMode;if($saved){Set-AC8GuiStatus '键位已保存' '自由观察、放大和手动接管键在下次启动生效；请同步核对游戏操纵绑定。'}}catch{Set-AC8GuiStatus '键位设置未打开' $_.Exception.Message $false}})
+$script:controls.Keybindings.Add_Click({try{$saved=Show-AC8KeybindingsDialog $script:dataRoot $window $script:themeMode;if($saved){Set-AC8GuiStatus '键位已保存' '自由观察、放大和手动接管键在下次启动生效；请同步核对游戏操纵绑定。'}}catch{Set-AC8GuiStatus '键位设置未打开' $_.Exception.Message $false}})
 # Flight recording (2.4.3): flight_recording in MouseAim-Settings.ini, applied at the next launch.
-$script:settingsPath=Join-Path $PSScriptRoot 'MouseAim-Settings.ini'
+$script:settingsPath=Join-Path $script:dataRoot 'MouseAim-Settings.ini'
 try{$script:controls.FlightRecording.IsChecked=((Read-MouseSettings $script:settingsPath).flight_recording -eq 1)}catch{$script:controls.FlightRecording.IsEnabled=$false}
 $script:controls.FlightRecording.Add_Click({
  $on=[bool]$script:controls.FlightRecording.IsChecked
@@ -133,11 +135,11 @@ $script:controls.FlightRecording.Add_Click({
   else{Set-AC8GuiStatus '已关闭飞行记录' '下次启动生效。只保留文字日志，不再保存 FE／Shadow 记录。'}
  }catch{$script:controls.FlightRecording.IsChecked=!$on;Set-AC8GuiStatus '设置未保存' $_.Exception.Message $false}
 })
-# Extra UE4SS mods (2.4.3): open package\ue4ss-mods and report what the next launch will load.
+# Extra UE4SS mods (2.4.3): open ue4ss-mods in the player data folder and report what the next launch will load.
 $script:controls.ExtraMods.Add_Click({
  try{
-  $folder=Join-Path $PSScriptRoot 'ue4ss-mods';if(!(Test-Path -LiteralPath $folder)){New-Item -ItemType Directory -Path $folder | Out-Null}
-  $found=@(Get-AC8ExtraMods $PSScriptRoot);$ok=@($found | Where-Object {!$_.Problem});$bad=@($found | Where-Object {$_.Problem})
+  $folder=Join-Path $script:dataRoot 'ue4ss-mods';if(!(Test-Path -LiteralPath $folder)){New-Item -ItemType Directory -Path $folder | Out-Null}
+  $found=@(Get-AC8ExtraMods $script:dataRoot);$ok=@($found | Where-Object {!$_.Problem});$bad=@($found | Where-Object {$_.Problem})
   $message=if($ok.Count){'下次启动将随本包加载：'+(($ok | ForEach-Object {$_.Name+'（'+$_.Kind+'）'}) -join '、')+'。'}else{'把其他 UE4SS Mod 的文件夹放进打开的 ue4ss-mods，下次启动随本包加载。'}
   if($bad.Count){$message+=' 已跳过：'+(($bad | ForEach-Object {$_.Name+'（'+$_.Problem+'）'}) -join '、')+'。'}
   Set-AC8GuiStatus ('附加 Mod：'+$ok.Count+' 个可加载') $message
@@ -155,7 +157,7 @@ $script:controls.CopyOption.Add_Click({
 })
 $script:controls.OpenLogs.Add_Click({
  try{
-  $folder=Join-Path $PSScriptRoot 'diagnostics'
+  $folder=Join-Path $script:dataRoot 'diagnostics'
   if(!(Test-Path -LiteralPath $folder)){Set-AC8GuiStatus '暂无诊断文件' '发生错误后，详细诊断会自动保存在这里。';return}
   Start-Process -FilePath 'explorer.exe' -ArgumentList ('"'+$folder+'"') -WindowStyle Normal
  }catch{Set-AC8GuiStatus '无法打开文件夹' $_.Exception.Message $false}
@@ -171,7 +173,7 @@ if($SmokeTest){
   $checked=@('GuidanceOnly','FullInstall','MouseOnly' | Where-Object {$script:controls[$_].IsChecked})
   if($checked.Count -ne 1 -or !$script:controls.ModeDescription.Text){throw 'GUI mode selection is not exclusive or lacks description'}
  }
- Set-AC8GuiSelectedMode $script:controls (Read-FeatureSettings (Join-Path $PSScriptRoot 'features.ini')).MissileMode
+ Set-AC8GuiSelectedMode $script:controls (Read-FeatureSettings (Join-Path $script:dataRoot 'features.ini')).MissileMode
  # Verify the token adapter and actual theme button before the background-action smoke.
  $before=$script:themeMode
  $script:controls.ThemeToggle.RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))
@@ -229,14 +231,14 @@ if($RenderPreview){
 try{
  $script:controls.GamePath.Text=Get-AC8GuiSavedPath $PSScriptRoot 'game-path.txt'
  $script:controls.SteamPath.Text=Get-AC8GuiSavedPath $PSScriptRoot 'steam-path.txt'
- Set-AC8GuiSelectedMode $script:controls (Read-FeatureSettings (Join-Path $PSScriptRoot 'features.ini')).MissileMode
+ Set-AC8GuiSelectedMode $script:controls (Read-FeatureSettings (Join-Path $script:dataRoot 'features.ini')).MissileMode
  Update-AC8GuiModeDescription
  $script:option=Get-AC8GuiSavedPath $PSScriptRoot 'Steam-Launch-Option.txt'
  if($script:option){$script:controls.LaunchOption.Text=$script:option;$script:controls.CopyOption.IsEnabled=$true}
 }catch{Set-AC8GuiStatus '读取设置未完成' $_.Exception.Message $false}
-# Prevent two GUI instances from writing the same package settings simultaneously.
+# Prevent two GUI instances from writing the same player settings simultaneously.
 $sha=[Security.Cryptography.SHA256]::Create()
-try{$key=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($PSScriptRoot.ToLowerInvariant()))).Replace('-','')}finally{$sha.Dispose()}
+try{$key=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($script:dataRoot.ToLowerInvariant()))).Replace('-','')}finally{$sha.Dispose()}
 $created=$false;$mutex=New-Object Threading.Mutex($true,('Local\AC8Gui-'+$key),[ref]$created)
 if(!$created){[void][Windows.MessageBox]::Show('此整合包的玩家工具已经打开。','AC8');$mutex.Dispose();exit 0}
 $script:autoDiscoveryStarted=$false
@@ -246,7 +248,7 @@ try{[void]$window.ShowDialog()}finally{$timer.Stop();$mutex.ReleaseMutex();$mute
 }catch{
  $failure=$_;$diagnostic=''
  try{
-  $dir=[IO.Path]::Combine($PSScriptRoot,'diagnostics');[void][IO.Directory]::CreateDirectory($dir)
+  $dir=[IO.Path]::Combine($(if($script:dataRoot){$script:dataRoot}else{$PSScriptRoot}),'diagnostics');[void][IO.Directory]::CreateDirectory($dir)
   $diagnostic=[IO.Path]::Combine($dir,('gui-startup-'+[guid]::NewGuid().ToString('N')+'.txt'))
   [IO.File]::WriteAllText($diagnostic,($failure.ToString()+[Environment]::NewLine+$failure.ScriptStackTrace),[Text.UTF8Encoding]::new($true))
  }catch{}

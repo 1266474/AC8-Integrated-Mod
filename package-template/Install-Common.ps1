@@ -67,7 +67,7 @@ function Show-AC8Problem($Failure,[string]$PackageRoot,[string]$Stage='操作') 
  Write-Host "[$Stage 未完成] $message" -ForegroundColor Red
  Write-Host $hint -ForegroundColor Yellow
  try{
-  $folder=Join-Path $PackageRoot 'diagnostics';New-Item -ItemType Directory -Path $folder -Force | Out-Null
+  $folder=Join-Path (Get-AC8DataRoot $PackageRoot) 'diagnostics';New-Item -ItemType Directory -Path $folder -Force | Out-Null
   $log=Join-Path $folder ((Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+[guid]::NewGuid().ToString('N')+'.txt')
   @("Stage: $Stage",$Failure.ToString(),$Failure.ScriptStackTrace) | Set-Content -LiteralPath $log -Encoding UTF8
   Write-Host "诊断文件：$log"

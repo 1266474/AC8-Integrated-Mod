@@ -1,7 +1,8 @@
 ﻿$ErrorActionPreference='Stop'
 if(Get-Process AceCombat8 -ErrorAction SilentlyContinue){throw 'Close AC8 normally before changing installed features.'}
+. ([IO.Path]::Combine($PSScriptRoot,'PowerShell-Compat.ps1'))
 . (Join-Path $PSScriptRoot 'Feature-Settings.ps1')
-$file=Join-Path $PSScriptRoot 'features.ini';$previous=Read-FeatureSettings $file
+$file=Join-Path (Get-AC8DataRoot $PSScriptRoot) 'features.ini';$previous=Read-FeatureSettings $file
 $default=switch($previous.MissileMode){'guidance'{'1'} 'full'{'2'} 'none'{'3'}}
 Write-Host '1. 鼠标飞控 + 仅比例引导 / Mouse flight + guidance only'
 Write-Host '   保留原版性能、锁定、伤害、装填、近炸设置和导弹外观。'

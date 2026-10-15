@@ -3,9 +3,11 @@ $ErrorActionPreference='Stop'
 if($CleanupOnly -and $CheckOnly){throw 'CleanupOnly and CheckOnly cannot be combined.'}
 $root=$PSScriptRoot
 . (Join-Path $root 'Install-Common.ps1')
+# Package files come from $root; user data (settings, sessions, backups) from $data, the same folder when portable.
+$data=Get-AC8DataRoot $root
 function Assert-ModEnabled {
 if(!$CleanupOnly -and !$CheckOnly){
- $disabled=Test-Path -LiteralPath (Join-Path $PSScriptRoot 'mod-disabled.flag')
+ $disabled=Test-Path -LiteralPath (Join-Path $data 'mod-disabled.flag')
  $parent=Split-Path $PSScriptRoot -Parent
  if((Test-Path -LiteralPath (Join-Path $parent 'AC8-Managed-Packages.json')) -and (Test-Path -LiteralPath (Join-Path $parent 'mod-disabled.flag'))){$disabled=$true}
  if($disabled){throw 'Mod disabled. Use Enable-Mod.cmd to restore offline mod mode.'}
@@ -13,12 +15,12 @@ if(!$CleanupOnly -and !$CheckOnly){
 }
 Assert-ModEnabled
 if(!$CleanupOnly){& (Join-Path $root 'Check-Package.ps1') -PackageRoot $root}
-$gameRoot=([string](Get-Content -LiteralPath (Join-Path $root 'game-path.txt') -Raw -Encoding UTF8)).Trim()
+$gameRoot=([string](Get-Content -LiteralPath (Join-Path $data 'game-path.txt') -Raw -Encoding UTF8)).Trim()
 $gameRoot=Resolve-AC8GameRoot $gameRoot
 Assert-AC8PackageLocation $root $gameRoot
 $w64=[IO.Path]::GetFullPath((Join-Path $gameRoot 'Game/Binaries/Win64'))
 $exe=Join-Path $w64 'AceCombat8.exe'
-$statePath=Join-Path $root 'active-session.json'
+$statePath=Join-Path $data 'active-session.json'
 . (Join-Path $root 'Cleanup-Core.ps1')
 Assert-AC8NoLinks $w64
 $expectedHash='51510E2A520565DBE81FB0D569E95CD4393077ACAAA859371489B80B8128829F'
@@ -34,13 +36,13 @@ function Get-SaveHashes {
  })
 }
 function Cleanup-Owned($state,[bool]$Analyze=$true) {
- $archive=Invoke-AC8Cleanup -GameRoot $gameRoot -BackupRoot (Join-Path $root 'cleanup-backups') -State $state
- if(!$archive){$archive=Join-Path $root ('cleanup-backups/completed-'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $archive -Force | Out-Null}
+ $archive=Invoke-AC8Cleanup -GameRoot $gameRoot -BackupRoot (Join-Path $data 'cleanup-backups') -State $state
+ if(!$archive){$archive=Join-Path $data ('cleanup-backups/completed-'+[guid]::NewGuid().ToString('N'));New-Item -ItemType Directory -Path $archive -Force | Out-Null}
  Move-Item -LiteralPath $statePath -Destination (Join-Path $archive 'completed-session.json')
  # Cleanup is complete before optional diagnostics. Missing saves cannot block recovery.
  try {
   $resultsPath=[IO.Path]::GetFullPath([string]$state.Results)
-  $sessionsPath=[IO.Path]::GetFullPath((Join-Path $root 'sessions'))+[IO.Path]::DirectorySeparatorChar
+  $sessionsPath=[IO.Path]::GetFullPath((Join-Path $data 'sessions'))+[IO.Path]::DirectorySeparatorChar
   if(!$resultsPath.StartsWith($sessionsPath,[StringComparison]::OrdinalIgnoreCase)){throw 'Session results path escaped this package; diagnostics skipped.'}
   New-Item -ItemType Directory -Path $state.Results -Force | Out-Null
   $runtime=Join-Path $archive 'ue4ss'
@@ -64,7 +66,7 @@ function Cleanup-Owned($state,[bool]$Analyze=$true) {
 }
 
 if($CleanupOnly){
- if(!(Test-Path -LiteralPath $statePath)){$null=Invoke-AC8Cleanup -GameRoot $gameRoot -BackupRoot (Join-Path $root 'cleanup-backups');exit 0}
+ if(!(Test-Path -LiteralPath $statePath)){$null=Invoke-AC8Cleanup -GameRoot $gameRoot -BackupRoot (Join-Path $data 'cleanup-backups');exit 0}
  Cleanup-Owned (Get-Content -LiteralPath $statePath -Raw -Encoding UTF8 | ConvertFrom-Json)
  exit 0
 }
@@ -87,10 +89,10 @@ foreach($entry in $manifest){
  if(!(Test-Path -LiteralPath $file) -or (Get-AC8FileHash -LiteralPath $file).Hash -ne $entry.SHA256){throw 'Payload hash verification failed.'}
 }
 if($CheckOnly){Write-Host 'LAUNCH PREFLIGHT passed. No files staged and no game started.';exit 0}
-Assert-AC8WriteAccess $root
+Assert-AC8WriteAccess $data
 Assert-AC8WriteAccess $w64
 $id=[guid]::NewGuid().ToString()
-$results=Join-Path $root ('sessions/'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+$id.Substring(0,8))
+$results=Join-Path $data ('sessions/'+(Get-Date -Format 'yyyyMMdd-HHmmss')+'-'+$id.Substring(0,8))
 New-Item -ItemType Directory -Path $results -Force | Out-Null
 $saveRoot=Join-Path $env:LOCALAPPDATA 'BANDAI NAMCO Entertainment/ACE COMBAT 8/Saved/SaveGames'
 $saveBackup=Join-Path $results 'SaveGames-before'
@@ -100,9 +102,9 @@ $before=Get-SaveHashes
 ConvertTo-Json -InputObject $before | Set-Content -LiteralPath (Join-Path $results 'save-hashes-before.json') -Encoding UTF8
 foreach($saveFile in $before){if((Get-AC8FileHash -LiteralPath (Join-Path $saveBackup $saveFile.Name)).Hash -ne $saveFile.SHA256){throw 'Save backup verification failed.'}}
 . (Join-Path $root 'MouseAim-Settings.ps1')
-$mouseSettings=Read-MouseSettings (Join-Path $root 'MouseAim-Settings.ini')
+$mouseSettings=Read-MouseSettings (Join-Path $data 'MouseAim-Settings.ini')
 . (Join-Path $root 'Feature-Settings.ps1')
-$features=Read-FeatureSettings (Join-Path $root 'features.ini')
+$features=Read-FeatureSettings (Join-Path $data 'features.ini')
 $readinessPattern=Get-FeatureReadinessPattern $features
 $features | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $results 'feature-selection.json') -Encoding UTF8
 $payload=Join-Path $root 'payload/Game/Binaries/Win64'
@@ -117,11 +119,11 @@ $stage='准备加载器'
 try {
  New-Item -ItemType Directory -Path (Join-Path $w64 'ue4ss') | Out-Null
  Set-Content -LiteralPath (Join-Path $w64 'ue4ss/AC8SourceInit-owner.txt') -Value $id -Encoding ASCII
- $extraMods=@(Get-AC8ExtraMods $root)
+ $extraMods=@(Get-AC8ExtraMods $data)
  Install-SelectedUE4SS (Join-Path $payload 'ue4ss') (Join-Path $w64 'ue4ss') $features $extraMods
  Apply-MouseSettings $mouseSettings (Join-Path $w64 'ue4ss/Mods/AC8MouseAim')
  . (Join-Path $root 'Keybinding-Settings.ps1')
- $bindings=Read-AC8Keybindings (Join-Path $root 'Keybindings.ini')
+ $bindings=Read-AC8Keybindings (Join-Path $data 'Keybindings.ini')
  Apply-AC8Keybindings $bindings (Join-Path $w64 'ue4ss/Mods/AC8MouseAim')
  $stage="写入加载器 $(Join-Path $w64 'dwmapi.dll')"
  Copy-Item -LiteralPath (Join-Path $payload 'dwmapi.dll') -Destination $w64

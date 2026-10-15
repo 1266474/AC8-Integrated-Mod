@@ -13,11 +13,12 @@
  $count=switch($mode){'guidance'{32} 'full'{375} 'none'{0}}
  return [pscustomobject]@{MissileMode=$mode;MissileEnhancement=($mode -ne 'none');ExpectedFields=$count}
 }
-function Get-AC8ExtraMods([string]$PackageRoot) {
- # Other UE4SS mods placed in <package>\ue4ss-mods (2.4.3). A folder with the standard UE4SS layout (Scripts\main.lua
+function Get-AC8ExtraMods([string]$DataRoot) {
+ # Other UE4SS mods placed in ue4ss-mods of the player data folder (2.4.3; the package folder when portable,
+ # <install>\data for the installed app). A folder with the standard UE4SS layout (Scripts\main.lua
  # and/or dlls\main.dll) is deployed with this package's UE4SS and enabled; a folder starting with _ is disabled. Names
  # reserved by this package, unusual names and filesystem links are skipped with a reason.
- $folder=Join-Path $PackageRoot 'ue4ss-mods'
+ $folder=Join-Path $DataRoot 'ue4ss-mods'
  if(!(Test-Path -LiteralPath $folder -PathType Container)){return @()}
  $reserved=@('AC8MouseAim','AC8SourceInit','shared')
  $link=[IO.FileAttributes]::ReparsePoint

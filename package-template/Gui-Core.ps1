@@ -3,12 +3,13 @@
 . (Join-Path $PSScriptRoot 'Feature-Settings.ps1')
 . (Join-Path $PSScriptRoot 'Discover-Installations.ps1')
 function Get-AC8GuiSavedPath([string]$Root,[string]$Name){
- $path=Join-Path $Root $Name
+ $path=Join-Path (Get-AC8DataRoot $Root) $Name
  if(Test-Path -LiteralPath $path -PathType Leaf){$text=Get-Content -LiteralPath $path -Raw -Encoding UTF8;if($null -ne $text){return $text.Trim()}}
  return ''
 }
 function Save-AC8GuiSettings([string]$Root,[string]$GameRoot,[string]$Steam,[ValidateSet('guidance','full','none')][string]$MissileMode){
- $option='"'+(Join-Path $Root 'Start-AC8-From-Steam.cmd')+'" %command%'
+ $option='"'+(Get-AC8SteamEntry $Root)+'" %command%'
+ $data=Get-AC8DataRoot $Root
  $values=[ordered]@{
   'game-path.txt'=$GameRoot
   'steam-path.txt'=$Steam
@@ -18,16 +19,16 @@ function Save-AC8GuiSettings([string]$Root,[string]$GameRoot,[string]$Steam,[Val
  $original=@{};$temporary=@{}
  try {
   foreach($name in $values.Keys){
-   $path=Join-Path $Root $name
+   $path=Join-Path $data $name
    $exists=Test-Path -LiteralPath $path
    $original[$name]=[pscustomobject]@{Exists=$exists;Content=$(if($exists){[Convert]::ToBase64String([IO.File]::ReadAllBytes($path))}else{''})}
    $temporary[$name]=$path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
    Set-Content -LiteralPath $temporary[$name] -Value $values[$name] -Encoding UTF8
   }
-  foreach($name in $values.Keys){Move-Item -LiteralPath $temporary[$name] -Destination (Join-Path $Root $name) -Force}
+  foreach($name in $values.Keys){Move-Item -LiteralPath $temporary[$name] -Destination (Join-Path $data $name) -Force}
  }catch{
   foreach($name in $original.Keys){
-   $path=Join-Path $Root $name
+   $path=Join-Path $data $name
    if($original[$name].Exists){[IO.File]::WriteAllBytes($path,[Convert]::FromBase64String([string]$original[$name].Content))}
    elseif(Test-Path -LiteralPath $path){Remove-Item -LiteralPath $path -Force}
   }
@@ -71,7 +72,7 @@ function Invoke-AC8GuiAction {
  }
  $steam=[IO.Path]::GetFullPath($steam)
  $residuals=@(Get-AC8Residuals $game)
- $active=Test-Path -LiteralPath (Join-Path $Root 'active-session.json')
+ $active=Test-Path -LiteralPath (Join-Path (Get-AC8DataRoot $Root) 'active-session.json')
  $running=[bool](Get-Process -Name AceCombat8 -ErrorAction SilentlyContinue)
  if($Action -eq 'Check'){
   $message='安装包与游戏版本校验通过。'
@@ -83,13 +84,13 @@ function Invoke-AC8GuiAction {
  if($running){Stop-AC8Problem 'GAME_RUNNING' '游戏正在运行。' '请正常退出游戏，等待清理完成后再操作。'}
  if($active -or $residuals.Count){Stop-AC8Problem 'LOADER_CONFLICT' '存在未完成会话或加载器残留。' '请先点击“备份并清理”，确认归属并完成清理后再操作。'}
  if($Action -eq 'Save'){
-  Assert-AC8WriteAccess $Root
+  Assert-AC8WriteAccess (Get-AC8DataRoot $Root)
   Assert-AC8WriteAccess (Join-Path $game 'Game/Binaries/Win64')
   $option=Save-AC8GuiSettings $Root $game $steam $MissileMode
   return [pscustomobject]@{Success=$true;Title='设置已保存';Message=('已保存：'+(Get-AC8GuiModeLabel $MissileMode)+'。下次启动生效。首次设置或移动整合包后，请复制启动选项到 Steam。');GameRoot=$game;Option=$option}
  }
  $savedGame=Get-AC8GuiSavedPath $Root 'game-path.txt';$savedSteam=Get-AC8GuiSavedPath $Root 'steam-path.txt'
- $savedFeatures=Read-FeatureSettings (Join-Path $Root 'features.ini')
+ $savedFeatures=Read-FeatureSettings (Join-Path (Get-AC8DataRoot $Root) 'features.ini')
  if($savedGame -ne $game -or $savedSteam -ne $steam -or $savedFeatures.MissileMode -ne $MissileMode){Stop-AC8Problem 'UNSAVED' '当前选择尚未保存。' '先点击“保存设置”，再启动游戏。'}
  & (Join-Path $Root 'Launch-AC8-via-Steam.ps1')
  return [pscustomobject]@{Success=$true;Title='已发送启动请求';Message='Steam 将执行云同步并启动游戏。是否成功进入游戏，请以 Steam 和游戏窗口为准；保留启动控制台以便退出后清理。';GameRoot=$game;Option=$null}

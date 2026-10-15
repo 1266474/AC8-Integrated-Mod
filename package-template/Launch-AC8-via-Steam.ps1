@@ -1,9 +1,9 @@
 ﻿param([switch]$CheckOnly)
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'Install-Common.ps1')
-$steam=([string](Get-Content -LiteralPath (Join-Path $PSScriptRoot 'steam-path.txt') -Raw -Encoding UTF8)).Trim()
+$steam=([string](Get-Content -LiteralPath (Join-Path (Get-AC8DataRoot $PSScriptRoot) 'steam-path.txt') -Raw -Encoding UTF8)).Trim()
 if(!$steam){Stop-AC8Problem 'SETUP_REQUIRED' '尚未完成安装设置。' '请先运行 Setup.cmd，再从 Start.cmd 启动。'}
-$bridge=Join-Path $PSScriptRoot 'Start-AC8-From-Steam.cmd'
+$bridge=Get-AC8SteamEntry $PSScriptRoot
 $expected='"'+$bridge+'" %command%'
 if(!(Test-Path -LiteralPath $steam)){Stop-AC8Problem 'STEAM_PATH' '之前保存的 Steam 路径已失效。' '请重新运行 Setup.cmd 更新路径。'}
 if(!(Test-Path -LiteralPath $bridge)){throw 'Steam mod bridge not found.'}

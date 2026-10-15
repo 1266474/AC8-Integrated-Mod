@@ -17,8 +17,9 @@ try {
   $package=Join-Path $Root $registry.activePackage
  }
  . (Join-Path $package 'Install-Common.ps1')
- $game=Resolve-AC8GameRoot ([IO.File]::ReadAllText((Join-Path $package 'game-path.txt')).Trim())
- $w64=Join-Path $game 'Game/Binaries/Win64';$flag=Join-Path $Root 'mod-disabled.flag'
+ $data=Get-AC8DataRoot $package
+ $game=Resolve-AC8GameRoot ([IO.File]::ReadAllText((Join-Path $data 'game-path.txt')).Trim())
+ $w64=Join-Path $game 'Game/Binaries/Win64';$flag=if($managed){Join-Path $Root 'mod-disabled.flag'}else{Join-Path $data 'mod-disabled.flag'}
  function Assert-Closed {
   if(Get-Process AceCombat8 -ErrorAction SilentlyContinue){throw '请先正常退出游戏；不能在游戏运行时切换到原版。F8不是卸载。'}
   if(Get-Process start_protected_game -ErrorAction SilentlyContinue){throw '受保护启动程序仍在运行，请等游戏启动或退出流程结束后再切换。'}
@@ -39,7 +40,7 @@ try {
    foreach($entry in $entries){
     if($managed -and $entry.name -notmatch '^AC8-Missiles-MouseAim-v[0-9.]+-(?:[a-z]+-)*candidate$'){throw 'Invalid registered path.'}
     $folder=if($managed){Join-Path $Root $entry.name}else{$package}
-    $stateFile=Join-Path $folder 'active-session.json'
+    $stateFile=Join-Path (Get-AC8DataRoot $folder) 'active-session.json'
     if(Test-Path -LiteralPath $stateFile){
      $state=Get-Content -LiteralPath $stateFile -Raw -Encoding UTF8|ConvertFrom-Json
      if($state.Id -eq $owner -and [IO.Path]::GetFullPath($state.Win64) -eq [IO.Path]::GetFullPath($w64)){

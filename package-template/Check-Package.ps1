@@ -20,8 +20,10 @@ foreach($item in $manifest){
 }
 . (Join-Path $PackageRoot 'MouseAim-Settings.ps1')
 . (Join-Path $PackageRoot 'Feature-Settings.ps1')
-$null=Read-MouseSettings (Join-Path $PackageRoot 'MouseAim-Settings.ini')
-$null=Read-FeatureSettings (Join-Path $PackageRoot 'features.ini')
+# Settings are the player's: in the shared data folder when installed, in the package when portable.
+$settingsRoot=Get-AC8DataRoot $PackageRoot
+$null=Read-MouseSettings (Join-Path $settingsRoot 'MouseAim-Settings.ini')
+$null=Read-FeatureSettings (Join-Path $settingsRoot 'features.ini')
 . (Join-Path $PSScriptRoot 'Keybinding-Settings.ps1')
-$null=Read-AC8Keybindings (Join-Path $PackageRoot 'Keybindings.ini')
+$null=Read-AC8Keybindings (Join-Path $settingsRoot 'Keybindings.ini')
 Write-Host 'PACKAGE CHECK passed: required files, deployment gate, payload hashes and settings. No game started.'

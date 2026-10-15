@@ -44,7 +44,7 @@ Get-ChildItem -LiteralPath $template -Filter *.ps1 -Recurse | ForEach-Object {
  $tokens=$null;$errors=$null;[Management.Automation.Language.Parser]::ParseFile($_.FullName,[ref]$tokens,[ref]$errors)|Out-Null;$errorsAll+=@($errors)
 }
 if($errorsAll.Count){throw 'PowerShell syntax validation failed'}
-Copy-Item -LiteralPath (Join-Path $template 'Choose-Features.ps1'),(Join-Path $template 'Feature-Settings.ps1') -Destination $tempRoot
+Copy-Item -LiteralPath (Join-Path $template 'Choose-Features.ps1'),(Join-Path $template 'Feature-Settings.ps1'),(Join-Path $template 'PowerShell-Compat.ps1') -Destination $tempRoot
 function Get-Process { [CmdletBinding()] param([string]$Name) if($global:AC8TestRunning){[pscustomobject]@{Id=1}} }
 function Read-Host { param([string]$Prompt)
  if($global:AC8TestChoice -eq 'bad'){$global:AC8TestChoice='Q';return 'bad'}
