@@ -217,7 +217,7 @@ function Install-AC8HostFiles([string]$InstallRoot,[string]$PackageRoot){
  foreach($pair in @(@('Host.ps1','Host.ps1'),@('App-Core.ps1','App-Core.ps1'),@('Start-AC8-From-Steam.cmd','Start-AC8-From-Steam.cmd'),@('update-key.xml','trust\update-key.xml'))){
   if(Copy-AC8AppFile ([IO.Path]::Combine($app,$pair[0])) ([IO.Path]::Combine($InstallRoot,$pair[1]))){$changed+=$pair[1]}
  }
- # The native launcher (package root): Start menu entry without a console window.
+ # AC8 Integrated.exe (package root): the launcher as its own application, the Start menu entry.
  $launcher=[IO.Path]::Combine($PackageRoot,'AC8 Integrated.exe')
  if([IO.File]::Exists($launcher) -and (Copy-AC8AppFile $launcher ([IO.Path]::Combine($InstallRoot,'AC8 Integrated.exe')))){$changed+='AC8 Integrated.exe'}
  return $changed

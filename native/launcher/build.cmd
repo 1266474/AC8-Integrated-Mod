@@ -1,17 +1,12 @@
 @echo off
-rem Builds native\build\AC8 Integrated.exe (Windows subsystem, static CRT, no debug information).
+rem Builds native\build\AC8 Integrated.exe with the .NET Framework 4 C# compiler included in Windows (no Visual Studio
+rem needed). It references the Windows PowerShell 5.1 engine (System.Management.Automation) of this machine.
 cd /d "%~dp0"
-if not defined VSCMD_ARG_TGT_ARCH (
- for /f "usebackq delims=" %%I in (`"%ProgramFiles(x86)%\Microsoft Visual Studio\Installer\vswhere.exe" -latest -products * -requires Microsoft.VisualStudio.Component.VC.Tools.x86.x64 -property installationPath`) do set "AC8_VS_PATH=%%I"
- if not defined AC8_VS_PATH exit /b 1
-)
-if not defined VSCMD_ARG_TGT_ARCH call "%AC8_VS_PATH%\VC\Auxiliary\Build\vcvars64.bat"
-if errorlevel 1 exit /b 1
-if /i not "%VSCMD_ARG_TGT_ARCH%"=="x64" exit /b 1
 if not exist ..\build mkdir ..\build
-python -X utf8 version-header.py ..\build\launcher-version.h
+python -X utf8 assembly-info.py ..\build\LauncherVersion.cs
 if errorlevel 1 exit /b 1
-rc /nologo /I ..\build /fo ..\build\AC8-Launcher.res AC8-Launcher.rc
-if errorlevel 1 exit /b 1
-cl /nologo /std:c++20 /utf-8 /EHsc /MT /O2 /DUNICODE /D_UNICODE AC8-Launcher.cpp /Fo..\build\AC8-Launcher.obj /Fe"..\build\AC8 Integrated.exe" /link ..\build\AC8-Launcher.res /SUBSYSTEM:WINDOWS /MANIFEST:NO user32.lib gdi32.lib shell32.lib
+set "AC8_SMA="
+for /f "usebackq delims=" %%I in (`%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe -NoProfile -Command "[PSObject].Assembly.Location"`) do set "AC8_SMA=%%I"
+if not defined AC8_SMA exit /b 1
+"%SystemRoot%\Microsoft.NET\Framework64\v4.0.30319\csc.exe" /nologo /target:winexe /platform:anycpu /optimize+ /debug- /codepage:65001 /win32icon:..\..\package-template\app\AC8.ico /win32manifest:AC8-Launcher.manifest /reference:"%AC8_SMA%" /reference:System.Windows.Forms.dll /reference:System.Drawing.dll /out:"..\build\AC8 Integrated.exe" AC8-Launcher.cs ..\build\LauncherVersion.cs
 exit /b %errorlevel%

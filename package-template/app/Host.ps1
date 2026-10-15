@@ -53,7 +53,7 @@ try{
     Start-Process -FilePath $powershell -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'),'-Action','Repair')
     exit 1
    }
-   # Same process (started by AC8 Integrated.exe without a console): one PowerShell start less before the window.
+   # Same process: AC8 Integrated.exe hosts this script, so the launcher window belongs to AC8 Integrated (taskbar icon).
    $global:LASTEXITCODE=0
    & ([IO.Path]::Combine($package,'Launcher-GUI.ps1'))
    exit $LASTEXITCODE
