@@ -18,7 +18,7 @@ function Write-FileList([string]$Dir){
   if($file.FullName -eq (Join-Path $Dir 'FILES.sha256')){continue}
   (Get-FileHash -LiteralPath $file.FullName).Hash.ToLowerInvariant()+'  '+$file.FullName.Substring($Dir.Length+1).Replace('\','/')
  })
- [IO.File]::WriteAllText((Join-Path $Dir 'FILES.sha256'),(($lines -join "`n")+"`n"))
+ [IO.File]::WriteAllText((Join-Path $Dir 'FILES.sha256'),(($lines -join "`n")+"`n"),(New-Object Text.UTF8Encoding($false)))
 }
 function New-TestRelease([string]$Version,[scriptblock]$Change={},[string]$KeyXml=$publicXml,[switch]$AfterList){
  $name='AC8-Integrated-v'+$Version+'-share';$base=Join-Path $fixture ('build-'+[guid]::NewGuid().ToString('N'));$dir=Join-Path $base $name
@@ -73,6 +73,12 @@ foreach($name in 'MouseAim-Settings.ini','Keybindings.ini','features.ini','game-
 $option='"'+(Join-Path $install 'Start-AC8-From-Steam.cmd')+'" %command%'
 Assert-True ((Get-Content -LiteralPath (Join-Path $data 'Steam-Launch-Option.txt') -Raw -Encoding UTF8).Trim() -eq $option) 'launch option file'
 Assert-True (!@(Get-AC8PackageFileProblems $v250).Count) 'installed version files'
+Assert-True ((Get-Content -LiteralPath (Join-Path $v250 'FILES.sha256') -Raw -Encoding UTF8) -match ([string][char]0x5F00+[char]0x59CB+[char]0x4F7F+[char]0x7528+'\.md')) 'file list names the Chinese files'
+$ansi=Join-Path $fixture 'ansi-list';New-Item -ItemType Directory -Path $ansi | Out-Null;$name=[string][char]0x5F00+[char]0x59CB+'.txt';[IO.File]::WriteAllText((Join-Path $ansi $name),'x')
+if([Text.Encoding]::Default.GetString([Text.Encoding]::Default.GetBytes($name)) -eq $name){
+ [IO.File]::WriteAllText((Join-Path $ansi 'FILES.sha256'),((Get-FileHash (Join-Path $ansi $name)).Hash.ToLowerInvariant()+'  '+$name+"`n"),[Text.Encoding]::Default)
+ Assert-True (!@(Get-AC8PackageFileProblems $ansi).Count) 'file list from an ANSI code page'
+}
 Assert-True ((Get-Content -LiteralPath (Join-Path $v250 'app-version.json') -Raw | ConvertFrom-Json).version -eq '2.5.0') 'app-version.json'
 $checks++
 # The package scripts resolve the shared data folder and the fixed Steam entry.

@@ -119,13 +119,19 @@ function Get-AC8AppBusyReason([string]$InstallRoot,[switch]$AllowSession){
 }
 
 # ---- packages ----
+function Read-AC8FileList([string]$Path){
+ # FILES.sha256 is UTF-8 (it names Chinese files); packages built before 2.5.0 used the builder's ANSI code page.
+ $bytes=[IO.File]::ReadAllBytes($Path)
+ try{$text=(New-Object Text.UTF8Encoding($false,$true)).GetString($bytes)}catch{$text=[Text.Encoding]::Default.GetString($bytes)}
+ return @($text.TrimStart([char]0xFEFF) -split "`r?`n" | Where-Object {$_})
+}
 function Get-AC8PackageFileProblems([string]$PackageRoot,[string[]]$Skip=@()){
  # FILES.sha256 of the release package: missing or changed files (relative paths). Extra files are not reported.
  $root=[IO.Path]::GetFullPath($PackageRoot).TrimEnd('\','/')
  $list=[IO.Path]::Combine($root,'FILES.sha256')
  if(![IO.File]::Exists($list)){return @('FILES.sha256')}
  $problems=New-Object Collections.Generic.List[string]
- foreach($line in [IO.File]::ReadAllLines($list)){
+ foreach($line in (Read-AC8FileList $list)){
   if(!$line){continue}
   if($line -notmatch '^([0-9a-fA-F]{64})  (.+)$'){$problems.Add('FILES.sha256');break}
   $digest=$Matches[1].ToUpperInvariant();$rel=$Matches[2]
@@ -160,7 +166,7 @@ function Expand-AC8PackageZip([string]$Zip,[string]$Destination){
  $problems=@(Get-AC8PackageFileProblems $package)
  if($problems.Count){Stop-AC8App 'PACKAGE_INVALID' ('安装包校验失败：'+$problems[0]) '请重新下载安装包。'}
  $listed=@{}
- foreach($line in [IO.File]::ReadAllLines([IO.Path]::Combine($package,'FILES.sha256'))){if($line){$listed[$line.Substring(66).Replace('/','\')]=$true}}
+ foreach($line in (Read-AC8FileList ([IO.Path]::Combine($package,'FILES.sha256')))){$listed[$line.Substring(66).Replace('/','\')]=$true}
  foreach($file in [IO.Directory]::GetFiles($package,'*','AllDirectories')){
   $rel=$file.Substring($package.Length+1)
   if($rel -ne 'FILES.sha256' -and !$listed.ContainsKey($rel)){Stop-AC8App 'PACKAGE_INVALID' ('安装包含有未登记的文件：'+$rel) '请重新下载安装包。'}

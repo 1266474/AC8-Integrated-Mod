@@ -39,14 +39,15 @@ def build(runtime_root,native_dll,output):
   # Preserve that binary intact; this exception cannot cover newly built files.
   upstream=pinned_runtime.get(str(p.resolve()))==sha(p)
   if not upstream and re.search(rb'(?i)[a-z]:[/\\]+users[/\\]+[^/\\\r\n]+',raw):raise ValueError(f'Private user-directory path: {p.name}')
- (output/'FILES.sha256').write_text(''.join(f'{sha(p)}  {p.relative_to(output).as_posix()}\n'for p in files))
+ # UTF-8 regardless of the build machine's code page: the list names Chinese files and the installed app verifies it.
+ (output/'FILES.sha256').write_text(''.join(f'{sha(p)}  {p.relative_to(output).as_posix()}\n'for p in files),encoding='utf-8',newline='\n')
  archive=Path(str(output)+'.zip')
  with zipfile.ZipFile(archive,'w',zipfile.ZIP_DEFLATED,6)as z:
   for p in sorted(output.rglob('*')):
    if p.is_file():z.write(p,(Path(output.name)/p.relative_to(output)).as_posix())
  with zipfile.ZipFile(archive)as z:
   assert z.testzip()is None
-  for line in (output/'FILES.sha256').read_text().splitlines():
+  for line in (output/'FILES.sha256').read_text(encoding='utf-8').splitlines():
    digest,name=line.split('  ',1);assert hashlib.sha256(z.read(output.name+'/'+name)).hexdigest()==digest
  Path(str(archive)+'.sha256').write_text(f'{sha(archive)}  {archive.name}\n')
  return {'archive':str(archive),'bytes':archive.stat().st_size,'sha256':sha(archive),'payload_files':len(manifest)}
