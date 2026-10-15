@@ -269,7 +269,7 @@ void load_config() {
     config.mouse_reference_fov=std::clamp(read_config_float(L"mouse_reference_fov",62),30.0f,150.0f);input_reference_fov=config.mouse_reference_fov;
     config.arrival_braking=std::clamp(read_config_float(L"arrival_braking",1.15f),1.0f,1.35f);
     model_assist_enabled.store(read_config_int(L"model_assist",1)!=0);
-    control_mode.store(control_modes::normalize(read_config_int(L"control_mode",0)));mode_notice_pending=true;
+    control_mode.store(control_modes::normalize(read_config_int(L"control_mode",control_modes::default_mode)));mode_notice_pending=true;
     config.model_assist_strength=std::clamp(read_config_float(L"model_assist_strength",.20f),0.f,.35f);
     hud_renderer.store(std::clamp(read_config_int(L"hud_renderer",3),0,3));
     hud_connector.store(read_config_int(L"hud_connector",1)!=0);
@@ -960,7 +960,7 @@ extern "C" __declspec(dllexport) int ac8_mouseaim_start(lua_State* state) {
     }
     load_config();
     log_line("CAMERA_SETTINGS mode=%d distance_m=%.1f height_m=%.1f F3=toggle; mission/cinematic recenter enabled",camera_view_mode.load(),camera_distance_cm.load()/100,camera_height_cm.load()/100);
-    log_line("PROFILE 2.4.3 WAR=13.8 HUD=GUNCROSS-TOGGLE+HMD-FREELOOK KEY-TAKEOVER-SEED FLIGHT-REC-OPT LEVEL-REARM PEACE-BANK-GOAL WAR=FE-EXACT-WT PATH-LOCK QUINTIC-LEVEL IDLE-GATE-LEVEL ROLL-PREDICT-NEAR AIM-WINDOW CAMERA-FAULT-RETRY HIL-TUNED WT-LEVEL WT-OVERRIDE WAR-DEGRADED=V11.1 PEACE-WAR-CYCLE CONTROL default_mode=%d sensitivity=%.4f hud_target_hz=%d reference_fov=%.1f braking=%.2f",control_mode.load(),config.sensitivity,hud_target_hz.load(),config.mouse_reference_fov,config.arrival_braking);
+    log_line("PROFILE 2.5.0 WAR=13.8 WAR-DEFAULT HUD=GUNCROSS-TOGGLE+HMD-FREELOOK KEY-TAKEOVER-SEED FLIGHT-REC-OPT LEVEL-REARM PEACE-BANK-GOAL WAR=FE-EXACT-WT PATH-LOCK QUINTIC-LEVEL IDLE-GATE-LEVEL ROLL-PREDICT-NEAR AIM-WINDOW CAMERA-FAULT-RETRY HIL-TUNED WT-LEVEL WT-OVERRIDE WAR-DEGRADED=V11.1 PEACE-WAR-CYCLE CONTROL default_mode=%d sensitivity=%.4f hud_target_hz=%d reference_fov=%.1f braking=%.2f",control_mode.load(),config.sensitivity,hud_target_hz.load(),config.mouse_reference_fov,config.arrival_braking);
     if (!prepare_hook()) return 0;
     install_native_camera();
     helmet::install();

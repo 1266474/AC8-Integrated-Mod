@@ -102,6 +102,7 @@ $before=Get-SaveHashes
 ConvertTo-Json -InputObject $before | Set-Content -LiteralPath (Join-Path $results 'save-hashes-before.json') -Encoding UTF8
 foreach($saveFile in $before){if((Get-AC8FileHash -LiteralPath (Join-Path $saveBackup $saveFile.Name)).Hash -ne $saveFile.SHA256){throw 'Save backup verification failed.'}}
 . (Join-Path $root 'MouseAim-Settings.ps1')
+foreach($migration in @(Invoke-AC8SettingsMigrations $data)){if($migration -eq 'war-default-2.5.0'){Write-Host 'SETTINGS: startup flight control is now WAR (2.5.0 default). F4 switches to PEACE.'}}
 $mouseSettings=Read-MouseSettings (Join-Path $data 'MouseAim-Settings.ini')
 . (Join-Path $root 'Feature-Settings.ps1')
 $features=Read-FeatureSettings (Join-Path $data 'features.ini')

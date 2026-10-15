@@ -1,5 +1,5 @@
 ﻿function Read-MouseSettings([string]$Path) {
- $values=@{sensitivity=0.10;free_look_zoom=1.75;hud_renderer=3;hud_connector=1;hud_link_always=0;hud_opacity=0.65;hud_boresight=1;flight_recording=0;control_mode=0;model_assist=1;model_assist_strength=0.20;mouse_reference_fov=62;arrival_braking=1.15;hud_fps=120;follow_rate=8;level_rate=3;camera_mode=1;camera_distance_m=36;camera_height_m=6}
+ $values=@{sensitivity=0.10;free_look_zoom=1.75;hud_renderer=3;hud_connector=1;hud_link_always=0;hud_opacity=0.65;hud_boresight=1;flight_recording=0;control_mode=3;model_assist=1;model_assist_strength=0.20;mouse_reference_fov=62;arrival_braking=1.15;hud_fps=120;follow_rate=8;level_rate=3;camera_mode=1;camera_distance_m=36;camera_height_m=6}
  if(Test-Path -LiteralPath $Path){
   foreach($line in (Get-Content -LiteralPath $Path)){
    $clean=$line.Trim();if(!$clean -or $clean.StartsWith(';')){continue}
@@ -38,6 +38,29 @@ function Apply-MouseSettings($Values,[string]$ModPath) {
  Set-Content -LiteralPath (Join-Path $ModPath 'Scripts/camera-settings.lua') -Value "return {follow_rate=$follow,level_rate=$level}" -Encoding ASCII
 }
 
+function Invoke-AC8SettingsMigrations([string]$DataRoot) {
+ # One-time changes to the player's saved settings, recorded in migrations.json next to them so that a later choice
+ # is never overwritten. war-default-2.5.0: WAR becomes the startup flight control; a saved PEACE (0, legacy 1) moves
+ # to WAR once, F4 still switches back. Returns the names applied now. An unreadable settings file is left for the
+ # normal error path and the migration is retried after it is fixed.
+ $record=Join-Path $DataRoot 'migrations.json';$done=@()
+ if(Test-Path -LiteralPath $record -PathType Leaf){$saved=Get-Content -LiteralPath $record -Raw -Encoding UTF8 | ConvertFrom-Json;$done=@($saved.applied | ForEach-Object {[string]$_})}
+ $applied=@()
+ if($done -notcontains 'war-default-2.5.0'){
+  $ini=Join-Path $DataRoot 'MouseAim-Settings.ini';$ok=$true
+  if(Test-Path -LiteralPath $ini -PathType Leaf){
+   try{$values=Read-MouseSettings $ini}catch{$ok=$false}
+   if($ok -and $values.control_mode -eq 0){Set-MouseSettingValue $ini 'control_mode' '3'}
+  }
+  if($ok){$applied+='war-default-2.5.0'}
+ }
+ if($applied.Count){
+  $temporary=$record+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+  ConvertTo-Json -InputObject ([pscustomobject]@{applied=@($done+$applied)}) | Set-Content -LiteralPath $temporary -Encoding UTF8
+  Move-Item -LiteralPath $temporary -Destination $record -Force
+ }
+ return $applied
+}
 function Set-MouseSettingValue([string]$Path,[string]$Key,[string]$Value) {
  # Edit one key of MouseAim-Settings.ini in place (other lines, comments, BOM and line endings kept); the result is
  # validated with Read-MouseSettings before it replaces the file. A missing key is appended.

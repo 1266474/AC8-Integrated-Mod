@@ -49,5 +49,26 @@ $bytes=[IO.File]::ReadAllBytes($user);if($bytes[0] -ne 0xEF -or $after -notmatch
 $caught=$false;try{Set-MouseSettingValue $user 'flight_recording' '2'}catch{$caught=$true};if(!$caught -or (Read-MouseSettings $user).flight_recording -ne 1 -or (Test-Path -LiteralPath ($user+'.tmp'))){throw 'Invalid checkbox value accepted or file damaged'}
 $old=Join-Path $fixture 'old.ini';[IO.File]::WriteAllText($old,(($settings -replace '(?m)^; Flight recording[^\r\n]*\r?\n','' -replace '(?m)^; Launcher: maintenance[^\r\n]*\r?\n','') -replace '(?m)^flight_recording=0\r?\n',''),(New-Object Text.UTF8Encoding($true)))
 Set-MouseSettingValue $old 'flight_recording' '1';if((Read-MouseSettings $old).flight_recording -ne 1){throw 'Missing key not appended'}
+# 2.5.0: WAR is the startup default (template, runtime config and missing line); a saved PEACE (0 or legacy 1) moves to WAR
+# exactly once, recorded in migrations.json; a later PEACE choice stays; an unreadable file is not marked as migrated.
+if((Read-MouseSettings (Join-Path $template 'MouseAim-Settings.ini')).control_mode -ne 3 -or $config -notmatch '(?m)^control_mode=3\r?$'){throw 'WAR must be the default control mode'}
+$noMode=Join-Path $fixture 'no-mode.ini';[IO.File]::WriteAllText($noMode,($settings -replace '(?m)^control_mode=3\r?\n',''));if((Read-MouseSettings $noMode).control_mode -ne 3){throw 'Missing control_mode must mean WAR'}
+foreach($case in @(@{saved='0';want=3;changed=$true},@{saved='1';want=3;changed=$true},@{saved='3';want=3;changed=$false},@{saved='4';want=3;changed=$false})){
+ $data=Join-Path $fixture ('migrate-'+$case.saved);New-Item -ItemType Directory -Path $data -Force | Out-Null
+ $ini=Join-Path $data 'MouseAim-Settings.ini';[IO.File]::WriteAllText($ini,($settings -replace '(?m)^control_mode=3',('control_mode='+$case.saved)),(New-Object Text.UTF8Encoding($true)))
+ $before=[IO.File]::ReadAllText($ini)
+ $applied=@(Invoke-AC8SettingsMigrations $data)
+ if($applied -join ',' -ne 'war-default-2.5.0'){throw "saved $($case.saved): migration not reported"}
+ if((Read-MouseSettings $ini).control_mode -ne $case.want){throw "saved $($case.saved): not WAR after migration"}
+ if(([IO.File]::ReadAllText($ini) -ne $before) -ne $case.changed){throw "saved $($case.saved): file changed unexpectedly"}
+ Set-MouseSettingValue $ini 'control_mode' '0'
+ if(@(Invoke-AC8SettingsMigrations $data).Count -or (Read-MouseSettings $ini).control_mode -ne 0){throw "saved $($case.saved): later PEACE choice overwritten"}
+ if(@((Get-Content -LiteralPath (Join-Path $data 'migrations.json') -Raw | ConvertFrom-Json).applied) -join ',' -ne 'war-default-2.5.0'){throw 'migrations.json not recorded once'}
+}
+$fresh=Join-Path $fixture 'migrate-empty';New-Item -ItemType Directory -Path $fresh -Force | Out-Null
+if(@(Invoke-AC8SettingsMigrations $fresh) -join ',' -ne 'war-default-2.5.0' -or (Test-Path -LiteralPath (Join-Path $fresh 'MouseAim-Settings.ini'))){throw 'Data without settings must only record the migration'}
+$broken=Join-Path $fixture 'migrate-broken';New-Item -ItemType Directory -Path $broken -Force | Out-Null
+[IO.File]::WriteAllText((Join-Path $broken 'MouseAim-Settings.ini'),"control_mode=0`r`nsensitivity=abc`r`n")
+if(@(Invoke-AC8SettingsMigrations $broken).Count -or (Test-Path -LiteralPath (Join-Path $broken 'migrations.json'))){throw 'Unreadable settings must not be marked as migrated'}
 Remove-Item -LiteralPath $fixture -Recurse -Force
-Write-Host 'PASS hud_boresight and flight_recording defaults, 0/1 written once into [control] (also for runtime configs without the line), invalid values rejected, launcher checkbox edit keeps the rest of the file'
+Write-Host 'PASS WAR default and one-time PEACE->WAR migration; hud_boresight and flight_recording defaults, 0/1 written once into [control] (also for runtime configs without the line), invalid values rejected, launcher checkbox edit keeps the rest of the file'
