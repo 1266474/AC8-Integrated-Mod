@@ -48,10 +48,10 @@ python scripts/build-package.py --runtime-root "D:\Mods\AC8-Integrated-v2.3.2-sh
 发布时除 share.zip 外还上传三个资产：
 
 ```powershell
-# 一次性：生成更新签名密钥。私钥以 DPAPI（当前 Windows 用户）保存在仓库之外，公钥写入 package-template/app/update-key.xml。
-powershell -File scripts/new-update-key.ps1 -PrivateKeyPath "<仓库之外>\ac8-update-signing.dpapi"
+# 一次性：生成更新签名密钥。私钥加密保存在仓库之外（只有当前 Windows 用户能解密），公钥写入 package-template/app/update-key.xml。
+powershell -File scripts/new-update-key.ps1 -PrivateKeyPath "<仓库之外>\ac8-update-signing.key"
 # 每次发布：为 share.zip 生成签名的 update-manifest.json(.sig)，并用 IExpress 生成安装程序。
-powershell -File scripts/sign-release.ps1 -Zip dist\AC8-Integrated-v2.5.0-share.zip -PrivateKeyPath "<…>\ac8-update-signing.dpapi"
+powershell -File scripts/sign-release.ps1 -Zip dist\AC8-Integrated-v2.5.0-share.zip -PrivateKeyPath "<…>\ac8-update-signing.key"
 powershell -File scripts/build-setup.ps1 -Zip dist\AC8-Integrated-v2.5.0-share.zip
 ```
 
