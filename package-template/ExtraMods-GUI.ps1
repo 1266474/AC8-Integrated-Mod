@@ -64,6 +64,7 @@ function New-AC8ExtraModsDialog([string]$Root,$Owner,[ValidateSet('dark','light'
  $xml=[xml](Get-Content -LiteralPath (Join-Path $PSScriptRoot 'ExtraMods-GUI.xaml') -Raw -Encoding UTF8)
  $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($xml));if($Owner){$dialog.Owner=$Owner}
  Set-CreeperUXTheme $dialog $Theme
+ Set-AC8WindowIcon $dialog
  $area=[Windows.SystemParameters]::WorkArea;$dialog.Width=[Math]::Min($dialog.Width,$area.Width-24);$dialog.Height=[Math]::Min($dialog.Height,$area.Height-24);$dialog.MinWidth=[Math]::Min($dialog.MinWidth,$dialog.Width);$dialog.MinHeight=[Math]::Min($dialog.MinHeight,$dialog.Height)
  [void][IO.Directory]::CreateDirectory((Join-Path $Root 'ue4ss-mods'))
  # Event handlers are GetNewClosure() closures, which resolve commands only at global scope: they call through the

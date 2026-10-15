@@ -6,6 +6,7 @@ param([string]$Zip='',[string]$InstallRoot='',[string]$ImportFrom='',[switch]$No
 $ErrorActionPreference='Stop'
 foreach($module in @('Microsoft.PowerShell.Management','Microsoft.PowerShell.Utility')){Import-Module ([IO.Path]::Combine($PSHOME,'Modules',$module,($module+'.psd1'))) -ErrorAction Stop}
 . ([IO.Path]::Combine($PSScriptRoot,'App-Core.ps1'))
+try{$Host.UI.RawUI.WindowTitle='AC8 Integrated · 安装'}catch{}
 try{
  Write-Host 'AC8 Integrated 安装程序 · 仅限离线单人'
  if(!$InstallRoot){$InstallRoot=Get-AC8DefaultInstallRoot}
@@ -46,7 +47,9 @@ try{
  Write-Host '以后从开始菜单的“AC8 Integrated”打开启动器；更新、检查并修复也在启动器里，卸载在 Windows 设置 → 应用。'
  if($import){Write-Host ('便携版仍在原处：'+$import+'。确认安装版正常后可以自行删除（其中 sessions 保存着旧的飞行记录和存档备份）。')}
  if(!$NoLaunch -and ($Yes -or (Read-Host '直接回车打开启动器；输入 N 结束') -ine 'N')){
-  Start-Process -FilePath ([IO.Path]::Combine($PSHOME,'powershell.exe')) -WindowStyle Hidden -ArgumentList @('-NoProfile','-STA','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File',('"'+[IO.Path]::Combine($InstallRoot,'Host.ps1')+'"'),'-Action','Gui')
+  $launcher=[IO.Path]::Combine($InstallRoot,'AC8 Integrated.exe')
+  if([IO.File]::Exists($launcher)){Start-Process -FilePath $launcher}
+  else{Start-Process -FilePath ([IO.Path]::Combine($PSHOME,'powershell.exe')) -WindowStyle Hidden -ArgumentList @('-NoProfile','-STA','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File',('"'+[IO.Path]::Combine($InstallRoot,'Host.ps1')+'"'),'-Action','Gui')}
  }
  exit 0
 }catch{

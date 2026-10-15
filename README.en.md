@@ -18,7 +18,7 @@ Also included:
 
 Recommended: run **AC8-Integrated-Setup-v2.5.0.exe** with the game closed, import the portable package's settings when asked, and paste the shown line into Steam's launch options. Afterwards open AC8 Integrated from the Start menu; updates and repair are in the launcher. The interface is Chinese.
 
-The portable **AC8-Integrated-v2.5.0-share.zip** remains available (not the Source code ZIP): extract it to a new folder outside the game, run Start-GUI.cmd or Setup.cmd, and replace the Steam launch option with the newly generated line. Do not mix payloads, settings or used session folders between versions.
+The portable **AC8-Integrated-v2.5.0-share.zip** remains available (not the Source code ZIP): extract it to a new folder outside the game, run AC8 Integrated.exe (or Setup.cmd), and replace the Steam launch option with the newly generated line. Do not mix payloads, settings or used session folders between versions.
 
 A saved PEACE selection moves to WAR once with 2.5.0; switching back with F4 or `control_mode=0` is kept afterwards.
 

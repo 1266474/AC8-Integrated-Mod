@@ -1,5 +1,6 @@
 @echo off
 setlocal
+title AC8 Integrated
 rem AC8 Integrated installed app: the fixed Steam entry. Steam launch option:
 rem   "<install root>\Start-AC8-From-Steam.cmd" %command%
 if exist "%~dp0data\mod-disabled.flag" goto original

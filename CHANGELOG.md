@@ -7,6 +7,7 @@
 - WAR is the default flight control (control_modes::default_mode=3, template/runtime config, Read-MouseSettings); a saved PEACE moves to WAR once (migrations.json war-default-2.5.0).
 - User data through Get-AC8DataRoot / Get-AC8SteamEntry (portable packages unchanged).
 - Extra-mod manager (launcher "附加 Mod"): add from a zip or folder (drag and drop; mod folders found by layout; loader DLLs and Pak assets not installed; unsafe paths and links refused), replace keeping the enabled state with the old copy in ue4ss-mods-removed, enable/disable, remove to ue4ss-mods-removed (ExtraMods-Settings.ps1, ExtraMods-GUI.ps1/.xaml, Test-ExtraModsManager).
+- Native launcher AC8 Integrated.exe (native/launcher, Windows subsystem, static CRT, icon and version resource): starts Host.ps1 -Action Gui (installed) or Launcher-GUI.ps1 (package) through Windows PowerShell without a console window, with a splash until the window appears; Start menu shortcut and Apps & features icon use it; Host runs the launcher in its own process; window icons; console titles "AC8 Integrated". Test-Launcher in CI.
 - Confirmation dialog takes its own title and action (updates and repair no longer show the cleanup wording).
 - Tests: Test-App (installed app end to end), migration cases in Test-MouseSettings, modes_tests default.
 - Also in 2.5.0 (prepared as 2.4.3, not released separately):

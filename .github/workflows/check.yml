@@ -15,6 +15,10 @@ jobs:
       - run: python -X utf8 tools/check-localization.py
       - run: native\test.cmd
         shell: cmd
+      - run: native\launcher\build.cmd
+        shell: cmd
+      - run: .\tests\Test-Launcher.ps1
+        shell: powershell
       - run: python -X utf8 tests/test_native_style.py
       - run: python -X utf8 tests/test_mod_mode.py
       - run: python -X utf8 tests/test_helmet.py

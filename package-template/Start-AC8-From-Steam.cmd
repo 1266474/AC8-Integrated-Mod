@@ -1,5 +1,6 @@
 @echo off
 setlocal
+title AC8 Integrated
 if exist "%~dp0mod-disabled.flag" goto original
 if exist "%~dp0..\AC8-Managed-Packages.json" if exist "%~dp0..\mod-disabled.flag" goto original
 "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" -NoProfile -ExecutionPolicy Bypass -File "%~dp0Run-Console.ps1" -Action Session

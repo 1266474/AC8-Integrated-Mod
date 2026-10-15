@@ -13,6 +13,7 @@ function New-AC8KeybindingsDialog([string]$Root,$Owner,[ValidateSet('dark','ligh
  $xml=[xml](Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Keybindings-GUI.xaml') -Raw -Encoding UTF8)
  $dialog=[Windows.Markup.XamlReader]::Load([Xml.XmlNodeReader]::new($xml));if($Owner){$dialog.Owner=$Owner}
  Set-CreeperUXTheme $dialog $Theme
+ if(Get-Command Set-AC8WindowIcon -ErrorAction SilentlyContinue){Set-AC8WindowIcon $dialog}
  $area=[Windows.SystemParameters]::WorkArea;$dialog.Width=[Math]::Min($dialog.Width,$area.Width-24);$dialog.Height=[Math]::Min($dialog.Height,$area.Height-24);$dialog.MinWidth=[Math]::Min($dialog.MinWidth,$dialog.Width);$dialog.MinHeight=[Math]::Min($dialog.MinHeight,$dialog.Height)
  $state=@{Values=(Read-AC8Keybindings (Join-Path $Root 'Keybindings.ini'));Capture=$null;Saved=$false}
  # Event handlers are GetNewClosure() closures, which resolve commands only at global scope. Carry the functions they

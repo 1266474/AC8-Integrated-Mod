@@ -23,7 +23,7 @@
 
 推荐使用安装程序 **AC8-Integrated-Setup-v2.5.0.exe**：退出游戏后运行，按提示导入便携版设置，再把显示的一行替换进 Steam 启动选项。以后从开始菜单打开 AC8 Integrated，更新和修复都在启动器里。详见 [安装版说明](docs/APP.md)。
 
-也可以继续使用便携版：下载完整的 share.zip（不要用 Source code ZIP），解压到游戏目录之外的新文件夹，运行 Start-GUI.cmd 或 Setup.cmd，保存后把新生成的 Steam 启动选项替换进去。退出游戏时等待控制台清理完成。
+也可以继续使用便携版：下载完整的 share.zip（不要用 Source code ZIP），解压到游戏目录之外的新文件夹，双击 AC8 Integrated.exe（或运行 Setup.cmd），保存后把新生成的 Steam 启动选项替换进去。退出游戏时等待控制台清理完成。
 
 ## 从旧版本升级
 

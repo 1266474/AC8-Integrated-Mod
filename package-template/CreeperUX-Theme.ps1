@@ -24,6 +24,11 @@ function Set-CreeperUXTheme($Window,[ValidateSet('dark','light')][string]$Mode){
  $Window.Resources['CxDisplay']=[Windows.Media.FontFamily]::new($fontRoot,'./#Chakra Petch SemiBold')
  $Window.Resources['CxMono']=[Windows.Media.FontFamily]::new($fontRoot,'./#Share Tech Mono')
 }
+function Set-AC8WindowIcon($Window){
+ # Title bar and taskbar icon (app\AC8.ico of this package); a missing icon keeps the default.
+ $path=[IO.Path]::Combine($PSScriptRoot,'app','AC8.ico')
+ if([IO.File]::Exists($path)){try{$Window.Icon=[Windows.Media.Imaging.BitmapFrame]::Create([Uri]::new($path))}catch{}}
+}
 function Show-CreeperUXConfirmation($Owner,[string]$Message,[switch]$PassThru,[string]$Title='备份并清理',[string]$ConfirmText='确认归属并清理',[string]$WindowTitle='确认清理'){
  # Defaults: the cleanup confirmation. Updates, repair and mod management pass their own title and action.
  $dialog=[Windows.Window]::new()

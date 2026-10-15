@@ -19,6 +19,9 @@ function Write-AC8Findings($Findings){
 }
 function Wait-AC8Close{if(!$Yes){[void](Read-Host '按回车关闭此窗口')}}
 function Start-AC8Launcher([string]$Package){
+ # The native launcher when installed (no console window, splash until the window appears).
+ $launcher=[IO.Path]::Combine($installRoot,'AC8 Integrated.exe')
+ if([IO.File]::Exists($launcher)){Start-Process -FilePath $launcher;return}
  Start-Process -FilePath $powershell -WindowStyle Hidden -ArgumentList @('-NoProfile','-STA','-WindowStyle','Hidden','-ExecutionPolicy','Bypass','-File',('"'+[IO.Path]::Combine($Package,'Launcher-GUI.ps1')+'"'))
 }
 function Get-AC8ReadyPackage{
@@ -29,6 +32,8 @@ function Get-AC8ReadyPackage{
  if($bad.Count){Stop-AC8App 'APP_DAMAGED' $bad[0].Message '请在开始菜单打开 AC8 Integrated 并使用“检查并修复”；需要时会从 GitHub 重新下载同一版本。'}
  return Get-AC8CurrentPackage $installRoot
 }
+$titles=@{Session='游戏会话（请保持打开，退出游戏后自动清理）';Update='检查更新';Repair='检查并修复';Rollback='回退版本';Uninstall='卸载'}
+if($titles.ContainsKey($Action)){try{$Host.UI.RawUI.WindowTitle='AC8 Integrated · '+$titles[$Action]}catch{}}
 try{
  switch($Action){
   'Session'{
@@ -48,8 +53,10 @@ try{
     Start-Process -FilePath $powershell -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$PSCommandPath+'"'),'-Action','Repair')
     exit 1
    }
-   Start-AC8Launcher $package
-   exit 0
+   # Same process (started by AC8 Integrated.exe without a console): one PowerShell start less before the window.
+   $global:LASTEXITCODE=0
+   & ([IO.Path]::Combine($package,'Launcher-GUI.ps1'))
+   exit $LASTEXITCODE
   }
   'Update'{
    Write-Host 'AC8 Integrated · 检查更新（GitHub 发布页，只下载、不上传任何数据）'

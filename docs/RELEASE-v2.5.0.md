@@ -8,6 +8,7 @@
   - 新增安装程序 **AC8-Integrated-Setup-v2.5.0.exe**：按用户安装，不需要管理员权限；开始菜单有 AC8 Integrated 启动器，可在 Windows“应用”中卸载。
   - 可以直接导入正在使用的便携版的设置、键位、路径和附加 Mod。
   - Steam 启动选项固定指向安装目录，以后更新不用再改。
+  - 新的原生启动程序 **AC8 Integrated.exe**：从开始菜单（或便携包中双击）直接打开启动器，不再闪出命令行窗口。
 - **从 GitHub 自动更新**：启动器“检查更新”一键更新，也可以每天自动检查。安装前核对数字签名和 SHA-256，只接受更新的正式版；保留上一版本，可以回退。
 - **自动修复**：
   - 每次启动前自动核对程序文件，损坏时从本地已校验的安装包恢复。
@@ -25,13 +26,13 @@
 ## 安装与升级
 
 - **推荐**：运行安装程序，按提示导入便携版设置，再把显示的一行替换进 Steam 启动选项。详见 [安装版说明](APP.md)。
-- **便携版**：下载完整的 **AC8-Integrated-v2.5.0-share.zip**，解压到游戏目录之外的新目录，运行 Start-GUI.cmd 或 Setup.cmd，并替换 Steam 启动选项。
+- **便携版**：下载完整的 **AC8-Integrated-v2.5.0-share.zip**，解压到游戏目录之外的新目录，双击 AC8 Integrated.exe（或运行 Setup.cmd），并替换 Steam 启动选项。
 
 ## English summary
 
 **Stable release. Offline single-player only.** Flight control is unchanged from v2.4.2 (WAR v13.8 / PEACE).
 
-- **Windows setup program** (AC8-Integrated-Setup-v2.5.0.exe): per-user install without administrator rights, Start menu launcher, uninstall from Windows Settings > Apps, import of the portable package in use; the Steam launch option stays the same across updates.
+- **Windows setup program** (AC8-Integrated-Setup-v2.5.0.exe): per-user install without administrator rights, Start menu launcher (the native AC8 Integrated.exe opens it without a console window), uninstall from Windows Settings > Apps, import of the portable package in use; the Steam launch option stays the same across updates.
 - **Updates from GitHub**: one click in the launcher, optional daily check; the signed manifest and SHA-256 are verified, only newer stable releases are installed, the previous version is kept for rollback.
 - **Self-repair**: program files are checked before every launch and restored from the cached verified package; "check and repair" also fixes unreadable settings, unfinished sessions and reports the Steam launch option. DLLs removed by security software are reported before the game starts, and `[NOT READY]` now shows the reason.
 - **WAR is the default flight control.** A saved PEACE selection moves to WAR once; switching back with F4 or `control_mode=0` is kept afterwards.

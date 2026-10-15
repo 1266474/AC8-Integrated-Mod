@@ -4,7 +4,7 @@ import argparse,hashlib,json,shutil,zipfile,re,subprocess,sys
 
 REPO=Path(__file__).resolve().parents[1]
 def sha(path):return hashlib.sha256(path.read_bytes()).hexdigest()
-def build(runtime_root,native_dll,output):
+def build(runtime_root,native_dll,output,launcher_exe=REPO/'native/build/AC8 Integrated.exe'):
  subprocess.run([sys.executable,str(REPO/'scripts/generate-hud-theme.py'),'--check'],check=True)
  version=json.loads((REPO/'version.json').read_text())
  runtime=json.loads((REPO/'runtime-dependencies.json').read_text())
@@ -12,6 +12,7 @@ def build(runtime_root,native_dll,output):
   p=runtime_root/entry['path']
   if not p.is_file()or sha(p)!=entry['sha256']:raise ValueError(f"Pinned runtime mismatch: {entry['path']}")
  if not native_dll.is_file():raise ValueError('Build native/build.cmd first, or supply --native-dll')
+ if not launcher_exe.is_file():raise ValueError('Build native/launcher/build.cmd first, or supply --launcher-exe')
  if output.exists()or Path(str(output)+'.zip').exists():raise ValueError('Output already exists; use a fresh directory')
  for script in (REPO/'package-template').rglob('*.ps1'):
   if script.read_bytes().startswith(b'\xef\xbb\xbf\xef\xbb\xbf'):raise ValueError(f'Duplicate UTF-8 BOM: {script.name}')
@@ -21,6 +22,7 @@ def build(runtime_root,native_dll,output):
  for entry in runtime['files']:
   p=output/'payload'/entry['path'];p.parent.mkdir(parents=True,exist_ok=True);shutil.copy2(runtime_root/entry['path'],p)
  dll=output/'payload/Game/Binaries/Win64/ue4ss/Mods/AC8MouseAim/Scripts/ac8_mouse_aim_010.dll';shutil.copy2(native_dll,dll)
+ shutil.copy2(launcher_exe,output/'AC8 Integrated.exe')   # native launcher: opens the player tool without a console window
  for name in ('tools','models','licenses','docs'):
   shutil.copytree(REPO/name,output/name,ignore=shutil.ignore_patterns('__pycache__','*.pyc'))
  for name in ('README.md','LICENSE','THIRD_PARTY_NOTICES.md','CHANGELOG.md'):shutil.copy2(REPO/name,output/name)
@@ -54,5 +56,5 @@ def build(runtime_root,native_dll,output):
 
 if __name__=='__main__':
  version=json.loads((REPO/'version.json').read_text())['version']
- p=argparse.ArgumentParser();p.add_argument('--runtime-root',type=Path,required=True,help='payload directory from the pinned portable runtime distribution');p.add_argument('--native-dll',type=Path,default=REPO/'native/build/ac8_mouse_aim_010.dll');p.add_argument('--output',type=Path,default=REPO/f'dist/AC8-Integrated-v{version}-share');a=p.parse_args()
- print(json.dumps(build(a.runtime_root.resolve(),a.native_dll.resolve(),a.output.resolve()),indent=2))
+ p=argparse.ArgumentParser();p.add_argument('--runtime-root',type=Path,required=True,help='payload directory from the pinned portable runtime distribution');p.add_argument('--native-dll',type=Path,default=REPO/'native/build/ac8_mouse_aim_010.dll');p.add_argument('--output',type=Path,default=REPO/f'dist/AC8-Integrated-v{version}-share');p.add_argument('--launcher-exe',type=Path,default=REPO/'native/build/AC8 Integrated.exe');a=p.parse_args()
+ print(json.dumps(build(a.runtime_root.resolve(),a.native_dll.resolve(),a.output.resolve(),a.launcher_exe.resolve()),indent=2))

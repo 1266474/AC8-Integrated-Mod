@@ -217,6 +217,9 @@ function Install-AC8HostFiles([string]$InstallRoot,[string]$PackageRoot){
  foreach($pair in @(@('Host.ps1','Host.ps1'),@('App-Core.ps1','App-Core.ps1'),@('Start-AC8-From-Steam.cmd','Start-AC8-From-Steam.cmd'),@('update-key.xml','trust\update-key.xml'))){
   if(Copy-AC8AppFile ([IO.Path]::Combine($app,$pair[0])) ([IO.Path]::Combine($InstallRoot,$pair[1]))){$changed+=$pair[1]}
  }
+ # The native launcher (package root): Start menu entry without a console window.
+ $launcher=[IO.Path]::Combine($PackageRoot,'AC8 Integrated.exe')
+ if([IO.File]::Exists($launcher) -and (Copy-AC8AppFile $launcher ([IO.Path]::Combine($InstallRoot,'AC8 Integrated.exe')))){$changed+='AC8 Integrated.exe'}
  return $changed
 }
 function Remove-AC8OldVersions([string]$InstallRoot){
@@ -356,12 +359,13 @@ function Find-AC8PortablePackage([string]$InstallRoot,[string]$SteamRoot=''){
 function Get-AC8AppShortcutPath{return [IO.Path]::Combine([Environment]::GetFolderPath('Programs'),'AC8 Integrated.lnk')}
 function Register-AC8App([string]$InstallRoot,[string]$Version,[string]$UninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AC8Integrated',[string]$Shortcut=(Get-AC8AppShortcutPath)){
  $powershell=[IO.Path]::Combine($PSHOME,'powershell.exe');$hostScript=[IO.Path]::Combine($InstallRoot,'Host.ps1')
- $icon=[IO.Path]::Combine($InstallRoot,'versions',$Version,'app','AC8.ico')
+ $icon=[IO.Path]::Combine($InstallRoot,'versions',$Version,'app','AC8.ico');$launcher=[IO.Path]::Combine($InstallRoot,'AC8 Integrated.exe')
+ if([IO.File]::Exists($launcher)){$icon=$launcher}
  $shell=New-Object -ComObject WScript.Shell
  try{
   $link=$shell.CreateShortcut($Shortcut)
-  $link.TargetPath=$powershell
-  $link.Arguments='-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File "'+$hostScript+'" -Action Gui'
+  if([IO.File]::Exists($launcher)){$link.TargetPath=$launcher;$link.Arguments=''}
+  else{$link.TargetPath=$powershell;$link.Arguments='-NoProfile -STA -WindowStyle Hidden -ExecutionPolicy Bypass -File "'+$hostScript+'" -Action Gui'}
   $link.WorkingDirectory=$InstallRoot;$link.Description='AC8 Integrated 启动器（离线单人）'
   if([IO.File]::Exists($icon)){$link.IconLocation=$icon+',0'}
   $link.Save()
@@ -383,7 +387,15 @@ function Unregister-AC8App([string]$UninstallKey='HKCU:\Software\Microsoft\Windo
 function Test-AC8AppRegistered([string]$InstallRoot,[string]$UninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AC8Integrated',[string]$Shortcut=(Get-AC8AppShortcutPath)){
  if(![IO.File]::Exists($Shortcut) -or !(Test-Path -LiteralPath $UninstallKey)){return $false}
  $location=(Get-ItemProperty -LiteralPath $UninstallKey -ErrorAction SilentlyContinue).InstallLocation
- return [string]::Equals([string]$location,$InstallRoot,[StringComparison]::OrdinalIgnoreCase)
+ if(![string]::Equals([string]$location,$InstallRoot,[StringComparison]::OrdinalIgnoreCase)){return $false}
+ # A shortcut from before the native launcher (powershell.exe) is replaced once the launcher is installed.
+ $launcher=[IO.Path]::Combine($InstallRoot,'AC8 Integrated.exe')
+ if([IO.File]::Exists($launcher)){
+  $shell=New-Object -ComObject WScript.Shell
+  try{$target=$shell.CreateShortcut($Shortcut).TargetPath}finally{[void][Runtime.InteropServices.Marshal]::ReleaseComObject($shell)}
+  if(![string]::Equals([string]$target,$launcher,[StringComparison]::OrdinalIgnoreCase)){return $false}
+ }
+ return $true
 }
 
 # ---- updates (GitHub releases, signed manifest) ----
@@ -596,7 +608,7 @@ function Invoke-AC8AppUninstall([string]$InstallRoot,[bool]$KeepData=$true,[swit
  }
  if(!$NoRegister){Unregister-AC8App}
  foreach($name in 'versions','trust'){Remove-AC8Tree ([IO.Path]::Combine($InstallRoot,$name))}
- foreach($name in 'Host.ps1','App-Core.ps1','Start-AC8-From-Steam.cmd','app.json'){Remove-AC8Tree ([IO.Path]::Combine($InstallRoot,$name))}
+ foreach($name in 'Host.ps1','App-Core.ps1','Start-AC8-From-Steam.cmd','AC8 Integrated.exe','app.json'){Remove-AC8Tree ([IO.Path]::Combine($InstallRoot,$name))}
  if(!$KeepData){Remove-AC8Tree $data}
  if([IO.Directory]::Exists($InstallRoot) -and !@([IO.Directory]::GetFileSystemEntries($InstallRoot)).Count){[IO.Directory]::Delete($InstallRoot,$false)}
 }

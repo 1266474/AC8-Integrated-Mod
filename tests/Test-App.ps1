@@ -25,6 +25,7 @@ function New-TestRelease([string]$Version,[scriptblock]$Change={},[string]$KeyXm
  New-Item -ItemType Directory -Path $base | Out-Null;Copy-Item -LiteralPath $template -Destination $dir -Recurse
  [IO.File]::WriteAllText((Join-Path $dir 'package-info.json'),('{"version":"'+$Version+'","status":"release"}'))
  [IO.File]::WriteAllText((Join-Path $dir 'app\update-key.xml'),$KeyXml)
+ $launcherExe=Join-Path $repo 'native\build\AC8 Integrated.exe';if(Test-Path -LiteralPath $launcherExe){Copy-Item -LiteralPath $launcherExe -Destination $dir}
  if(!$AfterList){& $Change $dir}
  Write-FileList $dir
  if($AfterList){& $Change $dir}
@@ -240,7 +241,9 @@ try{
  $props=Get-ItemProperty -LiteralPath $key
  Assert-True ($props.DisplayName -eq 'AC8 Integrated' -and $props.DisplayVersion -eq '2.5.0' -and $props.InstallLocation -eq $install3 -and $props.UninstallString -match [regex]::Escape((Join-Path $install3 'Host.ps1')) -and $props.UninstallString -match '-Action Uninstall' -and $props.NoModify -eq 1) 'uninstall entry'
  $shell=New-Object -ComObject WScript.Shell;$shortcut=$shell.CreateShortcut($link)
- Assert-True ($shortcut.Arguments -match [regex]::Escape('"'+(Join-Path $install3 'Host.ps1')+'"') -and $shortcut.Arguments -match '-Action Gui' -and $shortcut.IconLocation -match 'AC8\.ico') 'Start menu shortcut'
+ if(Test-Path -LiteralPath (Join-Path $install3 'AC8 Integrated.exe')){
+  Assert-True ($shortcut.TargetPath -eq (Join-Path $install3 'AC8 Integrated.exe') -and !$shortcut.Arguments -and $shortcut.IconLocation -match 'AC8 Integrated\.exe' -and $props.DisplayIcon -eq (Join-Path $install3 'AC8 Integrated.exe')) 'Start menu shortcut to the native launcher'
+ }else{Assert-True ($shortcut.Arguments -match [regex]::Escape('"'+(Join-Path $install3 'Host.ps1')+'"') -and $shortcut.Arguments -match '-Action Gui' -and $shortcut.IconLocation -match 'AC8\.ico') 'Start menu shortcut'}
  Assert-True (Test-AC8AppRegistered $install3 $key $link) 'registered'
  Unregister-AC8App $key $link
  Assert-True (!(Test-Path -LiteralPath $key) -and !(Test-Path -LiteralPath $link)) 'unregistered'

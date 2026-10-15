@@ -22,6 +22,7 @@ $window.Width=[Math]::Min($window.Width,[Math]::Max($window.MinWidth,$workArea.W
 $window.Height=[Math]::Min($window.Height,[Math]::Max($window.MinHeight,$workArea.Height-24))
 $script:themeMode=$Theme
 Set-CreeperUXTheme $window $script:themeMode
+Set-AC8WindowIcon $window
 $script:controls=@{}
 foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Save','Start','CopyOption','LaunchOption','Recover','OpenLogs','StatusTitle','StatusMessage','StatusCard','BusyBar','PreviewRoot','ThemeToggle','StatusMark','ModeDescription','Detect','GameCandidates','SteamCandidates','PackageVersion','DisableMod','EnableMod','Keybindings','FlightRecording','ExtraMods','AppUpdate','AppRepair','AutoUpdate'){$script:controls[$name]=$window.FindName($name)}
 $script:worker=$null;$script:async=$null;$script:option=''
