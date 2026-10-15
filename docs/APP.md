@@ -50,7 +50,7 @@
 安装目录下的 `data` 文件夹（启动器的“诊断文件夹”“附加 Mod”按钮会打开对应位置）：
 
 - `MouseAim-Settings.ini`、`Keybindings.ini`、`features.ini`：设置；
-- `ue4ss-mods`：附加 UE4SS Mod；
+- `ue4ss-mods`：附加 UE4SS Mod（在启动器“附加 Mod”中管理），`ue4ss-mods-removed`：删除或替换下来的 Mod；
 - `sessions`：每次运行的日志、飞行记录和存档备份（含个人数据，不要直接分享）；
 - `cleanup-backups`、`diagnostics`、`repair-backups`：清理、错误诊断和修复前的备份；
 - `update-cache`：已校验的安装包，用于离线修复。

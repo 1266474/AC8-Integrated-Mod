@@ -35,6 +35,8 @@
 *.dpapi
 *.pfx
 **/repair-backups/
+**/ue4ss-mods-removed/
+**/ue4ss-mods-staging/
 **/update-cache/
 **/app-settings.json
 **/migrations.json

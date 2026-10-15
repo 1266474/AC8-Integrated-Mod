@@ -16,7 +16,7 @@
 - **默认飞控改为 WAR**：新安装和升级后，启动时都是 WAR。以前保存为 PEACE 的设置会改为 WAR 一次；之后按 F4 切回 PEACE，或设置 `control_mode=0`，都会保留。
 - **与其他 UE4SS Mod 一起使用**：
   - 把其他 UE4SS Mod 的文件夹放进 `ue4ss-mods`，每次启动随本包的 UE4SS 一起部署并启用，退出后一起移走，原件保留。
-  - 启动器“附加 Mod”按钮会打开该文件夹，并显示下次启动会加载哪些 Mod、哪些被跳过及原因；控制台也会列出。
+  - 启动器“附加 Mod”窗口：从 zip 或文件夹添加（可拖放，自动找到 Mod 文件夹），启用／停用，删除到备份；列表显示下次启动会加载哪些 Mod，不加载时说明原因。控制台也会列出。
   - 附带同版本 UE4SS 的 `shared` 库（UEHelpers）。文件夹名以 `_` 开头即停用。详见 [与其他 UE4SS Mod 一起使用](EXTRA-MODS.md)。
 - **飞行记录开关**：启动器新增“保存飞行记录”（默认关闭）。关闭时只保留很小的文字日志；开启后每次飞行保存 FE／Shadow 记录（约 10–15 MB／分钟），用于问题分析。
 - **会话更小**：每次启动不再把 UE4SS.dll 和飞控 DLL（约 28 MB）复制进 sessions，只记录它们的哈希。
@@ -35,7 +35,7 @@
 - **Updates from GitHub**: one click in the launcher, optional daily check; the signed manifest and SHA-256 are verified, only newer stable releases are installed, the previous version is kept for rollback.
 - **Self-repair**: program files are checked before every launch and restored from the cached verified package; "check and repair" also fixes unreadable settings, unfinished sessions and reports the Steam launch option. DLLs removed by security software are reported before the game starts, and `[NOT READY]` now shows the reason.
 - **WAR is the default flight control.** A saved PEACE selection moves to WAR once; switching back with F4 or `control_mode=0` is kept afterwards.
-- **Other UE4SS mods** in `ue4ss-mods` load with this package's UE4SS (the UE4SS `shared` library is included; `_` prefix disables a mod).
+- **Other UE4SS mods** load with this package's UE4SS; the launcher's "附加 Mod" window adds them from a zip or folder (drag and drop works), enables/disables and removes them (to a backup). The UE4SS `shared` library is included.
 - **Flight-record switch** in the launcher, off by default; sessions no longer copy the DLLs (about 28 MB per launch).
 
 See [the installed app (Chinese, English summary at the end)](APP.md). The portable share.zip remains available.

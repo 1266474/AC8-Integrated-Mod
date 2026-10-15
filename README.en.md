@@ -2,7 +2,7 @@
 
 Stable release. **Offline single-player only; do not use online or in multiplayer.**
 
-**2.5.0:** a Windows setup program with one-click updates from GitHub, self-checks and repair, and a Steam launch option that never needs changing again; WAR is now the default flight control (F4 switches to PEACE). Other UE4SS mods can be used alongside (`ue4ss-mods` folder), a "save flight records" switch in the launcher (off by default), and sessions no longer copy the DLLs. **2.4.2:** fixes the keyboard-takeover lag in WAR. Since 2.4.1 the nose reference gun cross can be switched with **Alt+F7**.
+**2.5.0:** a Windows setup program with one-click updates from GitHub, self-checks and repair, and a Steam launch option that never needs changing again; WAR is now the default flight control (F4 switches to PEACE). Other UE4SS mods can be used alongside (add a zip or folder in the launcher), a "save flight records" switch in the launcher (off by default), and sessions no longer copy the DLLs. **2.4.2:** fixes the keyboard-takeover lag in WAR. Since 2.4.1 the nose reference gun cross can be switched with **Alt+F7**.
 
 The mouse sets a direction and the mod coordinates the aircraft's attitude to fly to the ring. **F4** toggles two flight controllers:
 - **WAR** (default): built on a reconstructed model of AC8's rotation law with a War Thunder-style mouse-instructor structure: straight nose paths, smooth levelling once the mouse rests, quicker reversals, and War Thunder-style keyboard takeover.

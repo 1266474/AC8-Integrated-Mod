@@ -21,6 +21,10 @@ foreach($mode in 'dark','light'){
  if(!$actions.Children[0].IsCancel -or !$actions.Children[0].IsDefault){throw 'Confirmation must default to cancellation'}
  if($actions.Children[1].Tag -ne 'primary'){throw 'Confirmation action lost kit style'}
  if($dialog.Background.Color -ne $window.Resources['CxPanel'].Color){throw 'Confirmation uses a different theme'}
+ # Updates, repair and the mod manager pass their own title and action instead of the cleanup wording.
+ $custom=Show-CreeperUXConfirmation $window 'Test update confirmation.' -PassThru -Title 'Update to 9.9.9' -ConfirmText 'Update' -WindowTitle 'AC8 - Update'
+ if($custom.Title -ne 'AC8 - Update' -or $custom.Content.Children[0].Text -ne 'Update to 9.9.9' -or $custom.Content.Children[2].Children[1].Content -ne 'Update'){throw 'Confirmation ignores its title or action'}
+ if($dialog.Content.Children[0].Text -eq 'Update to 9.9.9' -or $dialog.Content.Children[2].Children[1].Content -eq 'Update'){throw 'Default confirmation wording changed'}
 }
 Write-Host 'PASS upstream token hash, dark/light palette, themed confirmation and default cancellation.'
 exit 0

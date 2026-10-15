@@ -13,6 +13,12 @@
  $count=switch($mode){'guidance'{32} 'full'{375} 'none'{0}}
  return [pscustomobject]@{MissileMode=$mode;MissileEnhancement=($mode -ne 'none');ExpectedFields=$count}
 }
+function Get-AC8ExtraModNameProblem([string]$Name) {
+ # Folder names usable as UE4SS mod names (mods.txt), not taken by this package's own components.
+ if($Name -notmatch '^[A-Za-z0-9][A-Za-z0-9_.\-]{0,63}$'){return '名称只能使用英文字母、数字和 _ . -'}
+ if(@('AC8MouseAim','AC8SourceInit','shared') -contains $Name){return '与本整合包自带的组件同名'}
+ return $null
+}
 function Get-AC8ExtraMods([string]$DataRoot) {
  # Other UE4SS mods placed in ue4ss-mods of the player data folder (2.4.3; the package folder when portable,
  # <install>\data for the installed app). A folder with the standard UE4SS layout (Scripts\main.lua
@@ -20,13 +26,11 @@ function Get-AC8ExtraMods([string]$DataRoot) {
  # reserved by this package, unusual names and filesystem links are skipped with a reason.
  $folder=Join-Path $DataRoot 'ue4ss-mods'
  if(!(Test-Path -LiteralPath $folder -PathType Container)){return @()}
- $reserved=@('AC8MouseAim','AC8SourceInit','shared')
  $link=[IO.FileAttributes]::ReparsePoint
  return @(foreach($dir in @(Get-ChildItem -LiteralPath $folder -Directory -Force | Sort-Object Name)){
   $name=$dir.Name;$problem=$null;$kind=@()
   if($name.StartsWith('_')){$problem='已停用（名称以 _ 开头）'}
-  elseif($name -notmatch '^[A-Za-z0-9][A-Za-z0-9_.\-]{0,63}$'){$problem='名称只能使用英文字母、数字和 _ . -'}
-  elseif($reserved -contains $name){$problem='与本整合包自带的组件同名'}
+  elseif(($nameProblem=Get-AC8ExtraModNameProblem $name)){$problem=$nameProblem}
   elseif(($dir.Attributes -band $link) -or @(Get-ChildItem -LiteralPath $dir.FullName -Recurse -Force | Where-Object {$_.Attributes -band $link}).Count){$problem='包含文件系统链接'}
   else{
    if(Test-Path -LiteralPath (Join-Path $dir.FullName 'Scripts/main.lua') -PathType Leaf){$kind+='Lua'}

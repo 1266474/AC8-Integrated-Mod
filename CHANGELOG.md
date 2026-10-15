@@ -6,6 +6,8 @@
 - Launch diagnostics: DLLs removed or changed right after deployment stop the launch with a security-software hint; [NOT READY] explains the reason from UE4SS.log.
 - WAR is the default flight control (control_modes::default_mode=3, template/runtime config, Read-MouseSettings); a saved PEACE moves to WAR once (migrations.json war-default-2.5.0).
 - User data through Get-AC8DataRoot / Get-AC8SteamEntry (portable packages unchanged).
+- Extra-mod manager (launcher "附加 Mod"): add from a zip or folder (drag and drop; mod folders found by layout; loader DLLs and Pak assets not installed; unsafe paths and links refused), replace keeping the enabled state with the old copy in ue4ss-mods-removed, enable/disable, remove to ue4ss-mods-removed (ExtraMods-Settings.ps1, ExtraMods-GUI.ps1/.xaml, Test-ExtraModsManager).
+- Confirmation dialog takes its own title and action (updates and repair no longer show the cleanup wording).
 - Tests: Test-App (installed app end to end), migration cases in Test-MouseSettings, modes_tests default.
 - Also in 2.5.0 (prepared as 2.4.3, not released separately):
   - Other UE4SS mods: folders in the package's `ue4ss-mods` are validated (standard layout, name, no links, not reserved; `_` prefix disables) and deployed/enabled after this package's mods on every launch, removed with the runtime afterwards. Launcher button "附加 Mod" opens the folder and reports what loads; the console lists it. Bundles the UE4SS `shared` library (UEHelpers) of the same build. docs/EXTRA-MODS.md.

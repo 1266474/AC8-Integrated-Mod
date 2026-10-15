@@ -7,6 +7,7 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 . (Join-Path $PSScriptRoot 'Gui-Core.ps1')
 . (Join-Path $PSScriptRoot 'CreeperUX-Theme.ps1')
 . (Join-Path $PSScriptRoot 'Keybindings-GUI.ps1')
+. (Join-Path $PSScriptRoot 'ExtraMods-GUI.ps1')
 . (Join-Path $PSScriptRoot 'MouseAim-Settings.ps1')
 # Player data: the package folder when portable, <install>\data for the installed app (2.5.0).
 $script:dataRoot=Get-AC8DataRoot $PSScriptRoot
@@ -96,7 +97,7 @@ function Start-AC8HostConsole([string]$HostAction){
 }
 function Request-AC8AppUpdate([string]$Version){
  $message='发现新版本 '+$Version+'。'+"`n`n"+'确认后启动器会关闭，并在控制台中下载、校验签名和哈希后安装。设置、键位、附加 Mod 和飞行记录都会保留，完成后自动重新打开启动器。'
- if(Show-CreeperUXConfirmation $window $message){Start-AC8HostConsole 'Update'}
+ if(Show-CreeperUXConfirmation $window $message -Title ('更新到 '+$Version) -ConfirmText '更新' -WindowTitle 'AC8 · 更新'){Start-AC8HostConsole 'Update'}
 }
 function Update-AC8GuiModeDescription {
  $mode=Get-AC8GuiSelectedMode $script:controls
@@ -151,23 +152,22 @@ $script:controls.FlightRecording.Add_Click({
   else{Set-AC8GuiStatus '已关闭飞行记录' '下次启动生效。只保留文字日志，不再保存 FE／Shadow 记录。'}
  }catch{$script:controls.FlightRecording.IsChecked=!$on;Set-AC8GuiStatus '设置未保存' $_.Exception.Message $false}
 })
-# Extra UE4SS mods (2.4.3): open ue4ss-mods in the player data folder and report what the next launch will load.
+# Extra UE4SS mods: the management dialog (2.5.0; add, enable/disable, remove), then what the next launch will load.
 $script:controls.ExtraMods.Add_Click({
  try{
-  $folder=Join-Path $script:dataRoot 'ue4ss-mods';if(!(Test-Path -LiteralPath $folder)){New-Item -ItemType Directory -Path $folder | Out-Null}
-  $found=@(Get-AC8ExtraMods $script:dataRoot);$ok=@($found | Where-Object {!$_.Problem});$bad=@($found | Where-Object {$_.Problem})
-  $message=if($ok.Count){'下次启动将随本包加载：'+(($ok | ForEach-Object {$_.Name+'（'+$_.Kind+'）'}) -join '、')+'。'}else{'把其他 UE4SS Mod 的文件夹放进打开的 ue4ss-mods，下次启动随本包加载。'}
-  if($bad.Count){$message+=' 已跳过：'+(($bad | ForEach-Object {$_.Name+'（'+$_.Problem+'）'}) -join '、')+'。'}
+  $null=Show-AC8ExtraModsDialog $script:dataRoot $window $script:themeMode
+  $found=@(Get-AC8ExtraMods $script:dataRoot);$ok=@($found | Where-Object {!$_.Problem});$bad=@($found | Where-Object {$_.Problem -and !$_.Name.StartsWith('_')})
+  $message=if($ok.Count){'下次启动将随本包加载：'+(($ok | ForEach-Object {$_.Name+'（'+$_.Kind+'）'}) -join '、')+'。'}else{'没有会加载的附加 Mod。可以在“附加 Mod”中添加 zip 或文件夹。'}
+  if($bad.Count){$message+=' 不会加载：'+(($bad | ForEach-Object {$_.Name+'（'+$_.Problem+'）'}) -join '、')+'。'}
   Set-AC8GuiStatus ('附加 Mod：'+$ok.Count+' 个可加载') $message
-  Start-Process -FilePath (Join-Path $env:SystemRoot 'explorer.exe') -ArgumentList ('"'+$folder+'"')
- }catch{Set-AC8GuiStatus '附加 Mod 文件夹未打开' $_.Exception.Message $false}
+ }catch{Set-AC8GuiStatus '附加 Mod 未打开' $_.Exception.Message $false}
 })
 $script:controls.Save.Add_Click({Start-AC8GuiWork 'Save'})
 $script:controls.AppUpdate.Add_Click({Start-AC8GuiWork 'UpdateCheck'})
 if($script:app){$script:controls.AppRepair.Visibility='Visible'}
 $script:controls.AppRepair.Add_Click({
  $message='将打开“检查并修复”控制台并关闭启动器：检查程序文件、设置、游戏目录和 Steam 启动选项，能修复的自动修复。'+"`n`n"+'游戏运行中请先退出游戏。'
- if(Show-CreeperUXConfirmation $window $message){Start-Process -FilePath ([IO.Path]::Combine($PSHOME,'powershell.exe')) -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+[IO.Path]::Combine($script:app.InstallRoot,'Host.ps1')+'"'),'-Action','Repair');$window.Close()}
+ if(Show-CreeperUXConfirmation $window $message -Title '检查并修复' -ConfirmText '开始检查' -WindowTitle 'AC8 · 检查并修复'){Start-Process -FilePath ([IO.Path]::Combine($PSHOME,'powershell.exe')) -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+[IO.Path]::Combine($script:app.InstallRoot,'Host.ps1')+'"'),'-Action','Repair');$window.Close()}
 })
 try{$script:controls.AutoUpdate.IsChecked=[bool](Read-AC8AppSettings $PSScriptRoot).auto_update_check}catch{$script:controls.AutoUpdate.IsEnabled=$false}
 $script:controls.AutoUpdate.Add_Click({
