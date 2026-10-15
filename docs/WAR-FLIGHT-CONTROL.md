@@ -2,7 +2,7 @@
 
 [返回说明首页](../README.md) · [按键参考](KEYBINDINGS.md) · [控制原理](CONTROL.md) · [参考准星](NATIVE-UI-STYLE.md) · [发布说明](RELEASE-v2.4.0.md)
 
-按 **F4** 在 **PEACE** 和 **WAR** 两种飞控之间切换，默认 PEACE。
+按 **F4** 在 **PEACE** 和 **WAR** 两种飞控之间切换；2.5.0 起默认 WAR。
 
 - **PEACE**：即以前的 CLASSIC 2.0，控制律没有改动。
 - **WAR**：2.4.0 重写的飞控。

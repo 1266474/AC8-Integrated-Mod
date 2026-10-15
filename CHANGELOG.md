@@ -1,10 +1,18 @@
-## 2.4.3
+## 2.5.0
 
-- Other UE4SS mods: folders in the package's `ue4ss-mods` are validated (standard layout, name, no links, not reserved; `_` prefix disables) and deployed/enabled after this package's mods on every launch, removed with the runtime afterwards. Launcher button "附加 Mod" opens the folder and reports what loads; the console lists it. Bundles the UE4SS `shared` library (UEHelpers) of the same build. docs/EXTRA-MODS.md.
-- Flight-record switch: launcher checkbox (maintenance) / `flight_recording` in MouseAim-Settings.ini, off by default. Off: no FE trace and no Shadow CSV (the recorder is not armed), the optional analysis is skipped; the text log is kept. Applied at the next launch.
-- Sessions record UE4SS.dll and the mod DLL by hash (`runtime-dll-hashes.json`) instead of copying them (about 28 MB per launch).
-- Launcher: F2 HMD description matches the bracketed ring. Flight control unchanged from 2.4.2.
-- Tests: Test-MouseSettings (flight_recording, launcher in-place edit), Test-Cleanup (session archive without DLL copies), Test-InstallUX (analysis skip), hud_reference_tests (recording off by default).
+- Installed app: IExpress setup program (per user, %LOCALAPPDATA%\Programs\AC8 Integrated, no administrator rights), Start menu launcher, Apps & features uninstall, import of the portable package the Steam launch option points to. Versions in versions\<v>, player data in data\, fixed Steam entry in the install root (package-template/app).
+- Updates from GitHub releases/latest: RSA-3072 signed update-manifest.json, zip size and SHA-256, full FILES.sha256 with no unlisted files and no unsafe paths; only newer versions; refused while the game runs or a session is unfinished; current and previous versions kept, rollback. Launcher: check for updates, optional daily check.
+- Self-repair: version and host files checked before every launch and restored from the cached verified zip; "check and repair" downloads the same version when needed, rebuilds unreadable settings with a backup, cleans an unfinished session, reports loader leftovers and the Steam launch option, restores the registration.
+- Launch diagnostics: DLLs removed or changed right after deployment stop the launch with a security-software hint; [NOT READY] explains the reason from UE4SS.log.
+- WAR is the default flight control (control_modes::default_mode=3, template/runtime config, Read-MouseSettings); a saved PEACE moves to WAR once (migrations.json war-default-2.5.0).
+- User data through Get-AC8DataRoot / Get-AC8SteamEntry (portable packages unchanged).
+- Tests: Test-App (installed app end to end), migration cases in Test-MouseSettings, modes_tests default.
+- Also in 2.5.0 (prepared as 2.4.3, not released separately):
+  - Other UE4SS mods: folders in the package's `ue4ss-mods` are validated (standard layout, name, no links, not reserved; `_` prefix disables) and deployed/enabled after this package's mods on every launch, removed with the runtime afterwards. Launcher button "附加 Mod" opens the folder and reports what loads; the console lists it. Bundles the UE4SS `shared` library (UEHelpers) of the same build. docs/EXTRA-MODS.md.
+  - Flight-record switch: launcher checkbox (maintenance) / `flight_recording` in MouseAim-Settings.ini, off by default. Off: no FE trace and no Shadow CSV (the recorder is not armed), the optional analysis is skipped; the text log is kept. Applied at the next launch.
+  - Sessions record UE4SS.dll and the mod DLL by hash (`runtime-dll-hashes.json`) instead of copying them (about 28 MB per launch).
+  - Launcher: F2 HMD description matches the bracketed ring. Flight control unchanged from 2.4.2.
+  - Tests: Test-MouseSettings (flight_recording, launcher in-place edit), Test-Cleanup (session archive without DLL copies), Test-InstallUX (analysis skip), hud_reference_tests (recording off by default).
 
 ## 2.4.2
 

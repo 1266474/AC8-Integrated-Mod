@@ -1,4 +1,4 @@
-# 与其他 UE4SS Mod 一起使用（2.4.3 起）
+# 与其他 UE4SS Mod 一起使用（2.5.0 起）
 
 [返回说明首页](../README.md) · [安装](INSTALL.md) · [已知限制](LIMITATIONS.md)
 
@@ -6,7 +6,7 @@
 
 ## 使用方法
 
-1. 在启动器“维护与恢复”中点击 **附加 Mod**，会打开整合包目录下的 `ue4ss-mods` 文件夹。
+1. 在启动器“维护与恢复”中点击 **附加 Mod**，会打开 `ue4ss-mods` 文件夹（便携版在整合包目录下，安装版在安装目录的 `data` 下）。
 2. 把其他 Mod 的文件夹整个放进去，保持 UE4SS 的标准结构：
    - Lua Mod：`ue4ss-mods\SomeMod\Scripts\main.lua`
    - C++ Mod：`ue4ss-mods\SomeMod\dlls\main.dll`

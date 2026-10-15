@@ -4,6 +4,8 @@
 
 **Offline single-player only. Never use this mod in online or multiplayer modes.**
 
+From 2.5.0 the recommended way is the setup program **AC8-Integrated-Setup-v2.5.0.exe**: it installs per user, can import the settings of your portable package, and updates and repairs itself from the launcher (Start menu: AC8 Integrated). Launcher buttons: 检查更新 — check for updates, 检查并修复 — check and repair, 每天自动检查更新 — check for updates daily. See [the installed app](../APP.md) (English summary at the end). The steps below describe the portable package.
+
 Use the [recommended v2.3.6 release](https://github.com/CreeperUX/AC8-Integrated-Mod/releases/latest), compatible with Windows x64 and Steam game build 25201480. Choose the English ZIP for a fixed English interface, or the separate Chinese ZIP. In-app language switching is planned for 2.3.7. Windows system dialogs may follow your Windows language.
 
 ## First installation
@@ -61,7 +63,7 @@ Edit `MouseAim-Settings.ini` while the game is closed. These settings apply at t
 
 | Setting | Default | Meaning |
 |---|---:|---|
-| `control_mode` | 0 | 0 = PEACE (CLASSIC 2.0), 3 = WAR; F4 switches during flight; legacy 1->0, 2/4/5->3 |
+| `control_mode` | 3 | 3 = WAR (default since 2.5.0), 0 = PEACE (CLASSIC 2.0); F4 switches during flight; legacy 1->0, 2/4/5->3 |
 | `sensitivity` | 0.10 | Mouse-direction sensitivity |
 | `hud_boresight` | 1 | Reference gun cross at the nose: 1 shown, 0 hidden; Alt+F7 toggles it in flight (this session only) |
 | `flight_recording` | 0 | 1 saves the FE/Shadow flight records of every flight (about 10-15 MB per minute, for diagnostics); 0 keeps the text log only. Also the launcher checkbox under maintenance; applied at the next launch |

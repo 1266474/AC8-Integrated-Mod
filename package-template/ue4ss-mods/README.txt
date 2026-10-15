@@ -1,4 +1,4 @@
-﻿附加 UE4SS Mod（2.4.3 起）
+﻿附加 UE4SS Mod（2.5.0 起）
 
 把其他基于 UE4SS 的 Mod 文件夹整个放到这里，例如：
   ue4ss-mods\SomeMod\Scripts\main.lua   （Lua Mod）

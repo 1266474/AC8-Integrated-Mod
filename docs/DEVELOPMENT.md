@@ -43,6 +43,20 @@ python scripts/build-package.py --runtime-root "D:\Mods\AC8-Integrated-v2.3.2-sh
 
 打包过程生成 `payload-manifest.json`、`FILES.sha256` 和 ZIP SHA256。运行时特性选择只影响暂存到游戏目录的模块，原始完整payload保持可校验。
 
+## 安装版资产（2.5.0 起）
+
+发布时除 share.zip 外还上传三个资产：
+
+```powershell
+# 一次性：生成更新签名密钥。私钥以 DPAPI（当前 Windows 用户）保存在仓库之外，公钥写入 package-template/app/update-key.xml。
+powershell -File scripts/new-update-key.ps1 -PrivateKeyPath "<仓库之外>\ac8-update-signing.dpapi"
+# 每次发布：为 share.zip 生成签名的 update-manifest.json(.sig)，并用 IExpress 生成安装程序。
+powershell -File scripts/sign-release.ps1 -Zip dist\AC8-Integrated-v2.5.0-share.zip -PrivateKeyPath "<…>\ac8-update-signing.dpapi"
+powershell -File scripts/build-setup.ps1 -Zip dist\AC8-Integrated-v2.5.0-share.zip
+```
+
+安装版从 GitHub `releases/latest` 读取 `update-manifest.json` 与 `.sig`，用包内公钥校验签名，再核对 zip 的大小、SHA-256 和 `FILES.sha256`。签名脚本会用 zip 内的公钥复核，公私钥不匹配时拒绝生成。安装版的结构、更新、修复、回退与卸载见 `package-template/app/App-Core.ps1`，测试见 `tests/Test-App.ps1`。
+
 ## 修改导弹设置
 
 当前导弹参数声明在 `package-template/payload/Game/Binaries/Win64/ue4ss/Mods/AC8SourceInit/Scripts/source_spec.lua`。外观规则在同目录 `msl_visual_rules.lua`。发布前运行回归测试并重新生成包清单；不要让用户直接修改带完整性校验的payload来跳过验证。
