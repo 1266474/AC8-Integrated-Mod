@@ -107,8 +107,8 @@ namespace CreeperUX.AC8Integrated {
    float scale=DeviceDpi/96f;var g=e.Graphics;g.TextRenderingHint=System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
    using(var border=new Pen(Color.FromArgb(0x37,0x37,0x37)))g.DrawRectangle(border,0,0,ClientSize.Width-1,ClientSize.Height-1);
    using(var accent=new SolidBrush(Color.FromArgb(0xf8,0xb7,0x00)))g.FillRectangle(accent,26*scale,30*scale,4*scale,ClientSize.Height-60*scale);
-   using(var title=new Font("Segoe UI Semibold",16f))using(var text=new SolidBrush(Color.FromArgb(0xf4,0xf1,0xeb)))g.DrawString("AC8 Integrated",title,text,44*scale,26*scale);
-   using(var body=new Font("Microsoft YaHei UI",10f))using(var muted=new SolidBrush(Color.FromArgb(0xa9,0xb0,0xb3)))g.DrawString("正在打开启动器…",body,muted,46*scale,68*scale);
+   using(var title=new Font("Segoe UI Semibold",16f))using(var text=new SolidBrush(Color.FromArgb(0xf4,0xf1,0xeb)))g.DrawString("AC8 Integrated",title,text,44*scale,20*scale);
+   using(var body=new Font("Microsoft YaHei UI",10f))using(var muted=new SolidBrush(Color.FromArgb(0xa9,0xb0,0xb3)))g.DrawString("正在打开启动器…",body,muted,46*scale,74*scale);
   }
   void Check(){
    if(OwnWindowVisible(Handle)){WindowSeen=true;Finish();}
