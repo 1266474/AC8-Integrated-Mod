@@ -55,6 +55,9 @@ jobs:
         shell: powershell
       - run: .\tests\Test-ExtraMods.ps1
         shell: powershell
+      # Installed app (2.5.0): setup, signed updates, repair, rollback, uninstall; temporary folders only.
+      - run: .\tests\Test-App.ps1
+        shell: powershell
 
       - name: Build and check the fixed English supplement
         shell: powershell

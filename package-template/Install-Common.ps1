@@ -84,6 +84,36 @@ function Get-AC8ConsoleBanner([string]$PackageRoot,$Validation) {
  $ready=if($candidate){'Local candidate build, not a published release. Event recording is automatic.'}else{'Event recording is automatic; logs are archived when the game exits.'}
  return [pscustomobject]@{Title=$title;Keys=$keys;Ready=$ready}
 }
+function Get-AC8MissingDeployedDlls([string]$PayloadWin64,[string]$Win64) {
+ # The loader, UE4SS and the mouse-flight DLL are written on every launch; security software may remove or block them
+ # right away. Returns the ones missing or different from the verified payload.
+ $missing=@()
+ foreach($rel in 'dwmapi.dll','ue4ss\UE4SS.dll','ue4ss\Mods\AC8MouseAim\Scripts\ac8_mouse_aim_010.dll'){
+  $source=Join-Path $PayloadWin64 $rel;$target=Join-Path $Win64 $rel
+  if(!(Test-Path -LiteralPath $target -PathType Leaf)){$missing+=$rel;continue}
+  try{if((Get-AC8FileHash -LiteralPath $target).Hash -ne (Get-AC8FileHash -LiteralPath $source).Hash){$missing+=$rel}}catch{$missing+=$rel}
+ }
+ return $missing
+}
+function Get-AC8ReadinessDiagnosis([string]$LogPath,$Features,[string[]]$MissingDlls=@(),[bool]$ExtraMods=$false) {
+ # Why the selected features have not reported readiness ([NOT READY]), from the deployed files and UE4SS.log only.
+ if($MissingDlls.Count){return 'DLL 缺失或被改动：'+($MissingDlls -join '、')+'。很可能被安全软件隔离；请在 Windows 安全中心的保护历史中查看并恢复。'}
+ if(!(Test-Path -LiteralPath $LogPath -PathType Leaf)){return 'UE4SS 没有启动（没有生成 UE4SS.log）：游戏可能没有加载 dwmapi.dll。请确认是从 Steam 启动、没有同时使用其他注入工具，并查看安全软件的拦截记录。'}
+ $text=''
+ try{$stream=[IO.File]::Open($LogPath,[IO.FileMode]::Open,[IO.FileAccess]::Read,[IO.FileShare]'ReadWrite,Delete');$reader=New-Object IO.StreamReader($stream);try{$text=$reader.ReadToEnd()}finally{$reader.Dispose()}}catch{return '无法读取 UE4SS.log：'+$_.Exception.Message}
+ $failed=[regex]::Match($text,'\[AC8SourceInit\] SOURCE_FAILED reason=([^\r\n]*)')
+ if($failed.Success){return '导弹模块初始化失败（'+$failed.Groups[1].Value.Trim()+'）。鼠标飞控不受影响；可以先改用“仅鼠标飞控”，反馈时请附上本次会话的 UE4SS.log。'}
+ if($text -notmatch '\[AC8MouseAim\].*Loaded\.'){
+  $hint='UE4SS 已启动，但鼠标飞控模块还没有加载。'
+  if($ExtraMods){$hint+='若一直如此，请先停用附加 Mod（文件夹名前加 _）再试。'}else{$hint+='若一直如此，请保留 UE4SS.log 并反馈。'}
+  return $hint
+ }
+ if($Features.MissileEnhancement){
+  if($text -notmatch '\[AC8SourceInit\]'){return '鼠标飞控已加载，导弹模块没有加载。请保留 UE4SS.log 并反馈；可以先改用“仅鼠标飞控”。'}
+  return '鼠标飞控已加载，导弹模块仍在等待游戏数据（通常进入主菜单后完成）。可以继续游戏，结果会写入日志。'
+ }
+ return '仍在加载，可以继续游戏。'
+}
 function Invoke-AC8OptionalAnalysis([string]$PackageRoot,[string]$Session) {
  if(!@(Get-ChildItem -LiteralPath (Join-Path $Session 'runtime-copy/Mods/AC8MouseAim/Logs') -Filter 'Shadow-*.csv' -File -ErrorAction SilentlyContinue).Count){
   Write-Host '未保存飞行记录（flight_recording=0），已跳过可选分析。文字日志已保留。';return

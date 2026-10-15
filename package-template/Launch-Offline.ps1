@@ -131,6 +131,9 @@ try {
  Write-AC8Json $state $statePath
  Set-Content -LiteralPath (Join-Path $w64 'steam_appid.txt') -Value '2288340' -Encoding ASCII
  Write-AC8Json $state $statePath
+ $stage='核对部署的 DLL'
+ $blocked=@(Get-AC8MissingDeployedDlls $payload $w64)
+ if($blocked.Count){Stop-AC8Problem 'AV_BLOCKED' ('刚部署的 DLL 缺失或被改动：'+($blocked -join '、')) '很可能被安全软件隔离或拦截。请在 Windows 安全中心 → 病毒和威胁防护 → 保护历史中查看；确认是误报后恢复文件，必要时把游戏的 Win64 目录加入排除项，再重新启动。不要关闭安全软件。'}
  $env:SteamAppId='2288340';$env:SteamGameId='2288340';$env:EOS_USE_ANTICHEATCLIENTNULL='1'
  $banner=Get-AC8ConsoleBanner $root $validation
  Write-Host $banner.Title
@@ -159,6 +162,7 @@ try {
   Write-Host $banner.Ready
  }elseif(!$game.HasExited){
   Write-Host '[NOT READY] The selected feature set has not reported readiness. Check the archived log.'
+  Write-Host ('  '+(Get-AC8ReadinessDiagnosis $runtimeLog $features @(Get-AC8MissingDeployedDlls $payload $w64) ([bool]@($extraMods | Where-Object {!$_.Problem}).Count))) -ForegroundColor Yellow
  }else{
   Write-Host '[EXITED] Game ended before source initialization readiness. Log will be preserved.'
  }

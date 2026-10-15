@@ -37,7 +37,8 @@ function Save-AC8GuiSettings([string]$Root,[string]$GameRoot,[string]$Steam,[Val
  return $option
 }
 function Invoke-AC8GuiAction {
- param([ValidateSet('Discover','Check','Save','Start','Recover')][string]$Action,[string]$Root,[string]$GamePath,[string]$SteamPath,[ValidateSet('guidance','full','none')][string]$MissileMode,[bool]$ConfirmRecovery=$false)
+ param([ValidateSet('Discover','Check','Save','Start','Recover','UpdateCheck','UpdateAuto')][string]$Action,[string]$Root,[string]$GamePath,[string]$SteamPath,[ValidateSet('guidance','full','none')][string]$MissileMode,[bool]$ConfirmRecovery=$false)
+ if($Action -in @('UpdateCheck','UpdateAuto')){return Invoke-AC8GuiUpdateCheck $Root ($Action -eq 'UpdateAuto')}
  if($Action -eq 'Discover'){
   $found=Find-AC8Installations -GamePath $GamePath -SteamPath $SteamPath
   $result=[pscustomobject]@{Success=$true;Title='自动定位完成';Message='未能唯一确定位置。请选择下方候选，或使用浏览按钮手动选择。';GameRoot=$found.GamePath;SteamPath=$found.SteamPath;GameCandidates=@($found.GameCandidates);SteamCandidates=@($found.SteamCandidates);Option=$null}
@@ -94,6 +95,55 @@ function Invoke-AC8GuiAction {
  if($savedGame -ne $game -or $savedSteam -ne $steam -or $savedFeatures.MissileMode -ne $MissileMode){Stop-AC8Problem 'UNSAVED' '当前选择尚未保存。' '先点击“保存设置”，再启动游戏。'}
  & (Join-Path $Root 'Launch-AC8-via-Steam.ps1')
  return [pscustomobject]@{Success=$true;Title='已发送启动请求';Message='Steam 将执行云同步并启动游戏。是否成功进入游戏，请以 Steam 和游戏窗口为准；保留启动控制台以便退出后清理。';GameRoot=$game;Option=$null}
+}
+
+# Launcher app settings (2.5.0) in app-settings.json next to the player's other settings.
+function Read-AC8AppSettings([string]$Root){
+ $values=[ordered]@{auto_update_check=$true;last_update_check_utc=''}
+ $path=Join-Path (Get-AC8DataRoot $Root) 'app-settings.json'
+ if(Test-Path -LiteralPath $path -PathType Leaf){
+  try{
+   $saved=Get-Content -LiteralPath $path -Raw -Encoding UTF8 | ConvertFrom-Json
+   if($null -ne $saved.auto_update_check){$values.auto_update_check=[bool]$saved.auto_update_check}
+   if($saved.last_update_check_utc){$values.last_update_check_utc=[string]$saved.last_update_check_utc}
+  }catch{}
+ }
+ return $values
+}
+function Save-AC8AppSettings([string]$Root,$Values){
+ $path=Join-Path (Get-AC8DataRoot $Root) 'app-settings.json';$temporary=$path+'.'+[guid]::NewGuid().ToString('N')+'.tmp'
+ ConvertTo-Json -InputObject ([pscustomobject]$Values) | Set-Content -LiteralPath $temporary -Encoding UTF8
+ Move-Item -LiteralPath $temporary -Destination $path -Force
+}
+function Test-AC8UpdateCheckDue([string]$Root){
+ # The automatic check runs at most once every 20 hours and can be switched off in the launcher.
+ $settings=Read-AC8AppSettings $Root
+ if(!$settings.auto_update_check){return $false}
+ if(!$settings.last_update_check_utc){return $true}
+ try{$last=[DateTime]::Parse($settings.last_update_check_utc,[Globalization.CultureInfo]::InvariantCulture,[Globalization.DateTimeStyles]::RoundtripKind)}catch{return $true}
+ return ([DateTime]::UtcNow-$last.ToUniversalTime()).TotalHours -ge 20
+}
+function Invoke-AC8GuiUpdateCheck([string]$Root,[bool]$Quiet,[string]$Feed=''){
+ # Reads only the latest GitHub release (nothing is uploaded or downloaded). Installing goes through Host.ps1, which
+ # checks the signed manifest and the package hash. A failed automatic check stays silent.
+ try{
+  . (Join-Path $Root 'app\App-Core.ps1')
+  $info=Get-Content -LiteralPath (Join-Path $Root 'package-info.json') -Raw -Encoding UTF8 | ConvertFrom-Json
+  $current=[string]$info.version
+  $settings=Read-AC8AppSettings $Root;$settings.last_update_check_utc=[DateTime]::UtcNow.ToString('o');Save-AC8AppSettings $Root $settings
+  $release=Get-AC8ReleaseInfo $Feed
+  $latest='';if([string]$release.tag_name -match '^v(.+)$'){$latest=$Matches[1]}
+  if(!(Test-AC8AppVersionName $latest)){throw 'GitHub 返回的版本号无法识别。'}
+  $installed=[bool](Get-AC8AppInfo $Root)
+  if((Compare-AC8AppVersion $latest $current) -gt 0){
+   $message=if($installed){'当前 '+$current+'。确认后会关闭启动器，在控制台中下载、校验签名并安装；设置、键位和记录都会保留。'}else{'当前 '+$current+'（便携版）。请到 GitHub 发布页下载新版本；安装版可以在启动器中一键更新。'}
+   return [pscustomobject]@{Success=$true;Title=('发现新版本 '+$latest);Message=$message;GameRoot=$null;Option=$null;Update=$latest;Installed=$installed;Quiet=$Quiet;NotesUrl=[string]$release.html_url}
+  }
+  return [pscustomobject]@{Success=$true;Title='已是最新版本';Message=('当前 '+$current+' 是 GitHub 上的最新正式版。');GameRoot=$null;Option=$null;Update=$null;Installed=$installed;Quiet=$Quiet;NotesUrl=[string]$release.html_url}
+ }catch{
+  if($Quiet){return [pscustomobject]@{Success=$true;Title='';Message='';GameRoot=$null;Option=$null;Update=$null;Installed=$false;Quiet=$true;NotesUrl=''}}
+  throw
+ }
 }
 
 function Get-AC8GuiModeLabel([ValidateSet('guidance','full','none')][string]$Mode){

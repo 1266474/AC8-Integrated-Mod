@@ -10,6 +10,7 @@ Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase,System
 . (Join-Path $PSScriptRoot 'MouseAim-Settings.ps1')
 # Player data: the package folder when portable, <install>\data for the installed app (2.5.0).
 $script:dataRoot=Get-AC8DataRoot $PSScriptRoot
+$script:app=Get-AC8AppInfo $PSScriptRoot
 $reader=New-Object System.Xml.XmlNodeReader ([xml](Get-Content -LiteralPath (Join-Path $PSScriptRoot 'Launcher-GUI.xaml') -Raw -Encoding UTF8))
 $window=[Windows.Markup.XamlReader]::Load($reader)
 # Fit the initial window to the available desktop; the content scales down instead of scrolling.
@@ -21,12 +22,12 @@ $window.Height=[Math]::Min($window.Height,[Math]::Max($window.MinHeight,$workAre
 $script:themeMode=$Theme
 Set-CreeperUXTheme $window $script:themeMode
 $script:controls=@{}
-foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Save','Start','CopyOption','LaunchOption','Recover','OpenLogs','StatusTitle','StatusMessage','StatusCard','BusyBar','PreviewRoot','ThemeToggle','StatusMark','ModeDescription','Detect','GameCandidates','SteamCandidates','PackageVersion','DisableMod','EnableMod','Keybindings','FlightRecording','ExtraMods'){$script:controls[$name]=$window.FindName($name)}
+foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Save','Start','CopyOption','LaunchOption','Recover','OpenLogs','StatusTitle','StatusMessage','StatusCard','BusyBar','PreviewRoot','ThemeToggle','StatusMark','ModeDescription','Detect','GameCandidates','SteamCandidates','PackageVersion','DisableMod','EnableMod','Keybindings','FlightRecording','ExtraMods','AppUpdate','AppRepair','AutoUpdate'){$script:controls[$name]=$window.FindName($name)}
 $script:worker=$null;$script:async=$null;$script:option=''
 $infoPath=Join-Path $PSScriptRoot 'package-info.json'
 if(Test-Path -LiteralPath $infoPath){
  $info=Get-Content -LiteralPath $infoPath -Raw -Encoding UTF8 | ConvertFrom-Json
- if($info.version){$label=switch($info.status){'prerelease'{'预发布'} 'release'{'正式版'} 'beta'{'Beta 测试版'} default{'候选'}};$script:controls.PackageVersion.Text=[string]$info.version+' · '+$label}
+ if($info.version){$label=switch($info.status){'prerelease'{'预发布'} 'release'{'正式版'} 'beta'{'Beta 测试版'} default{'候选'}};$script:controls.PackageVersion.Text=[string]$info.version+' · '+$label+$(if($script:app){' · 安装版'}else{''})}
 }
 
 function Set-AC8GuiStatus([string]$Title,[string]$Message,[bool]$Success=$true){
@@ -36,7 +37,7 @@ function Set-AC8GuiStatus([string]$Title,[string]$Message,[bool]$Success=$true){
  $script:controls.StatusMark.SetResourceReference([Windows.Controls.Border]::BackgroundProperty,$key)
 }
 function Set-AC8GuiBusy([bool]$Busy){
- foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Detect','Save','Start','Recover','GameCandidates','SteamCandidates','DisableMod','EnableMod','Keybindings','FlightRecording','ExtraMods'){$script:controls[$name].IsEnabled=!$Busy}
+ foreach($name in 'GamePath','SteamPath','BrowseGame','BrowseSteam','GuidanceOnly','MouseOnly','FullInstall','Check','Detect','Save','Start','Recover','GameCandidates','SteamCandidates','DisableMod','EnableMod','Keybindings','FlightRecording','ExtraMods','AppUpdate','AppRepair','AutoUpdate'){$script:controls[$name].IsEnabled=!$Busy}
  $script:controls.BusyBar.IsIndeterminate=[Windows.SystemParameters]::ClientAreaAnimation
  $script:controls.BusyBar.Value=50
  $script:controls.BusyBar.Visibility=if($Busy){'Visible'}else{'Collapsed'}
@@ -44,7 +45,7 @@ function Set-AC8GuiBusy([bool]$Busy){
 function Start-AC8GuiWork([string]$Action,[bool]$Confirm=$false){
  if($script:worker){return}
  Set-AC8GuiBusy $true
- Set-AC8GuiStatus '正在处理…' '请稍候，完成后会在这里显示结果。'
+ if($Action -ne 'UpdateAuto'){Set-AC8GuiStatus '正在处理…' '请稍候，完成后会在这里显示结果。'}
  try {
   $script:worker=[PowerShell]::Create()
   [void]$script:worker.AddCommand((Join-Path $PSScriptRoot 'Gui-Worker.ps1')).AddParameter('Action',$Action).AddParameter('Root',$PSScriptRoot).AddParameter('GamePath',$script:controls.GamePath.Text).AddParameter('SteamPath',$script:controls.SteamPath.Text).AddParameter('MissileMode',(Get-AC8GuiSelectedMode $script:controls)).AddParameter('ConfirmRecovery',$Confirm)
@@ -64,7 +65,10 @@ $timer.Add_Tick({
   $results=@($script:worker.EndInvoke($script:async))
   if(!$results.Count){throw '后台操作没有返回结果，请检查诊断记录。'}
   $result=$results[-1]
+  # Automatic update check: only the version badge changes, the status card keeps the previous result.
+  if($result.PSObject.Properties['Quiet'] -and $result.Quiet){if($result.Update){$script:controls.PackageVersion.Text+=' · 可更新到 '+$result.Update};return}
   Set-AC8GuiStatus $result.Title $result.Message ([bool]$result.Success)
+  if($result.PSObject.Properties['Update'] -and $result.Update -and $result.Installed -and !$SmokeTest){$script:pendingAppUpdate=$result.Update}
   if($result.GameRoot){$script:controls.GamePath.Text=$result.GameRoot}
   if($result.SteamPath){$script:controls.SteamPath.Text=$result.SteamPath}
   if($result.PSObject.Properties['GameCandidates']){
@@ -79,9 +83,21 @@ $timer.Add_Tick({
  }catch{Set-AC8GuiStatus '操作未完成' $_.Exception.Message $false}
  finally{
   $script:worker.Dispose();$script:worker=$null;$script:async=$null;Set-AC8GuiBusy $false
+  if($script:pendingAppUpdate){$version=$script:pendingAppUpdate;$script:pendingAppUpdate=$null;Request-AC8AppUpdate $version}
+  elseif($script:autoUpdatePending){$script:autoUpdatePending=$false;Start-AC8GuiWork 'UpdateAuto'}
   if($SmokeTest -and $script:smokeFrame){$script:smokeFrame.Continue=$false}
  }
 })
+# Installed app (2.5.0): updates, repair and rollback run in the host's console; the launcher closes meanwhile.
+function Start-AC8HostConsole([string]$HostAction){
+ $hostScript=[IO.Path]::Combine($script:app.InstallRoot,'Host.ps1')
+ Start-Process -FilePath ([IO.Path]::Combine($PSHOME,'powershell.exe')) -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+$hostScript+'"'),'-Action',$HostAction,'-Yes')
+ $window.Close()
+}
+function Request-AC8AppUpdate([string]$Version){
+ $message='发现新版本 '+$Version+'。'+"`n`n"+'确认后启动器会关闭，并在控制台中下载、校验签名和哈希后安装。设置、键位、附加 Mod 和飞行记录都会保留，完成后自动重新打开启动器。'
+ if(Show-CreeperUXConfirmation $window $message){Start-AC8HostConsole 'Update'}
+}
 function Update-AC8GuiModeDescription {
  $mode=Get-AC8GuiSelectedMode $script:controls
  $script:controls.ModeDescription.Text=switch($mode){
@@ -147,6 +163,18 @@ $script:controls.ExtraMods.Add_Click({
  }catch{Set-AC8GuiStatus '附加 Mod 文件夹未打开' $_.Exception.Message $false}
 })
 $script:controls.Save.Add_Click({Start-AC8GuiWork 'Save'})
+$script:controls.AppUpdate.Add_Click({Start-AC8GuiWork 'UpdateCheck'})
+if($script:app){$script:controls.AppRepair.Visibility='Visible'}
+$script:controls.AppRepair.Add_Click({
+ $message='将打开“检查并修复”控制台并关闭启动器：检查程序文件、设置、游戏目录和 Steam 启动选项，能修复的自动修复。'+"`n`n"+'游戏运行中请先退出游戏。'
+ if(Show-CreeperUXConfirmation $window $message){Start-Process -FilePath ([IO.Path]::Combine($PSHOME,'powershell.exe')) -ArgumentList @('-NoProfile','-ExecutionPolicy','Bypass','-File',('"'+[IO.Path]::Combine($script:app.InstallRoot,'Host.ps1')+'"'),'-Action','Repair');$window.Close()}
+})
+try{$script:controls.AutoUpdate.IsChecked=[bool](Read-AC8AppSettings $PSScriptRoot).auto_update_check}catch{$script:controls.AutoUpdate.IsEnabled=$false}
+$script:controls.AutoUpdate.Add_Click({
+ try{$settings=Read-AC8AppSettings $PSScriptRoot;$settings.auto_update_check=[bool]$script:controls.AutoUpdate.IsChecked;Save-AC8AppSettings $PSScriptRoot $settings
+  Set-AC8GuiStatus $(if($settings.auto_update_check){'已开启自动检查更新'}else{'已关闭自动检查更新'}) '打开启动器时最多每天检查一次 GitHub 上的最新正式版，只读取发布信息。'}
+ catch{Set-AC8GuiStatus '设置未保存' $_.Exception.Message $false}
+})
 $script:controls.Start.Add_Click({Start-AC8GuiWork 'Start'})
 $script:controls.Recover.Add_Click({
  $message="将检查当前游戏路径中的加载器，先备份校验再清理。`n`n请确认这些残留属于 AC8 Integrated。若安装过其他 Mod 或不清楚来源，请取消。`n`n游戏路径："+$script:controls.GamePath.Text
@@ -242,6 +270,7 @@ try{$key=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::UTF8.GetByte
 $created=$false;$mutex=New-Object Threading.Mutex($true,('Local\AC8Gui-'+$key),[ref]$created)
 if(!$created){[void][Windows.MessageBox]::Show('此整合包的玩家工具已经打开。','AC8');$mutex.Dispose();exit 0}
 $script:autoDiscoveryStarted=$false
+$script:autoUpdatePending=$false;try{$script:autoUpdatePending=Test-AC8UpdateCheckDue $PSScriptRoot}catch{}
 $window.Add_ContentRendered({if(!$script:autoDiscoveryStarted){$script:autoDiscoveryStarted=$true;Start-AC8GuiWork 'Discover'}})
 try{[void]$window.ShowDialog()}finally{$timer.Stop();$mutex.ReleaseMutex();$mutex.Dispose()}
 
