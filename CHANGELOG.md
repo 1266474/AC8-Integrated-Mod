@@ -1,3 +1,9 @@
+## 2.5.1
+
+- First public release of the 2.5 line (the entries under 2.5.0 below). 2.5.0 was a small test build; installed copies update to 2.5.1 from the launcher.
+- A Start menu shortcut from before the native launcher (powershell.exe) is renewed to AC8 Integrated.exe when the launcher opens (Update-AC8AppRegistration).
+- Version 2.5.1; "since 2.5" wording. Flight control unchanged (WAR v13.8 / PEACE).
+
 ## 2.5.0
 
 - Installed app: IExpress setup program (per user, %LOCALAPPDATA%\Programs\AC8 Integrated, no administrator rights), Start menu launcher, Apps & features uninstall, import of the portable package the Steam launch option points to. Versions in versions\<v>, player data in data\, fixed Steam entry in the install root (package-template/app).

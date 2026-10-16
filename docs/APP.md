@@ -1,8 +1,8 @@
-# 安装版（2.5.0 起）
+# 安装版（2.5 起）
 
 [返回说明首页](../README.md) · [安装与三种范围](INSTALL.md) · [其他 UE4SS Mod](EXTRA-MODS.md) · [已知限制](LIMITATIONS.md)
 
-2.5.0 起提供 Windows 安装程序。安装版与便携版的游戏内功能完全相同，另外可以：
+2.5 起提供 Windows 安装程序。安装版与便携版的游戏内功能完全相同，另外可以：
 - 从 GitHub 一键更新，每天自动检查新版本；
 - 每次启动前自动核对程序文件，损坏时自动恢复；“检查并修复”处理更多问题；
 - 设置和记录集中保存，Steam 启动选项以后不用再改；
@@ -10,7 +10,7 @@
 
 ## 安装
 
-1. 从 GitHub 发布页下载 **AC8-Integrated-Setup-v2.5.0.exe**。安装程序没有代码签名证书，Windows 可能提示“Windows 已保护你的电脑”，点击“更多信息”→“仍要运行”。
+1. 从 GitHub 发布页下载 **AC8-Integrated-Setup-v2.5.1.exe**。安装程序没有代码签名证书，Windows 可能提示“Windows 已保护你的电脑”，点击“更多信息”→“仍要运行”。
 2. 退出游戏后运行。程序安装到当前用户的 `%LOCALAPPDATA%\Programs\AC8 Integrated`，不需要管理员权限，不改动游戏目录和 Steam 设置。
 3. 正在使用便携版时，安装程序会根据 Steam 启动选项找到它，询问是否导入设置、键位、安装范围、游戏和 Steam 路径以及附加 Mod。便携版本身不会被改动。
 4. 把安装程序显示的一行（已复制到剪贴板）粘贴到 Steam → AC8 → 属性 → 通用 → 启动选项，替换原有内容。形式为：
@@ -66,4 +66,4 @@ share.zip 便携版继续提供，设置保存在包内。双击包里的 **AC8 
 
 ## English summary
 
-From 2.5.0 a Windows setup program installs AC8 Integrated per user in `%LOCALAPPDATA%\Programs\AC8 Integrated` (no administrator rights; the game folder and Steam settings are not changed). It can import the settings of the portable package your Steam launch option points to. Paste the shown line into Steam's launch options once; it stays valid across updates. The launcher (Start menu: AC8 Integrated) checks GitHub for updates (manually, or at most once a day), verifies the RSA-3072 signed update manifest, the package SHA-256 and every file, installs only newer stable releases and keeps the previous version for rollback. Before every launch the program files are checked and restored from the cached verified package; "检查并修复" (check and repair) also rebuilds unreadable settings with a backup, finishes an unfinished session, and reports loader leftovers and the Steam launch option. Player data lives in `data`. Uninstall from Windows Settings > Apps, then remove the Steam launch option. The portable share.zip remains available. The setup program is not code-signed, so SmartScreen may ask for confirmation.
+From 2.5 a Windows setup program installs AC8 Integrated per user in `%LOCALAPPDATA%\Programs\AC8 Integrated` (no administrator rights; the game folder and Steam settings are not changed). It can import the settings of the portable package your Steam launch option points to. Paste the shown line into Steam's launch options once; it stays valid across updates. The launcher (Start menu: AC8 Integrated) checks GitHub for updates (manually, or at most once a day), verifies the RSA-3072 signed update manifest, the package SHA-256 and every file, installs only newer stable releases and keeps the previous version for rollback. Before every launch the program files are checked and restored from the cached verified package; "检查并修复" (check and repair) also rebuilds unreadable settings with a backup, finishes an unfinished session, and reports loader leftovers and the Steam launch option. Player data lives in `data`. Uninstall from Windows Settings > Apps, then remove the Steam launch option. The portable share.zip remains available. The setup program is not code-signed, so SmartScreen may ask for confirmation.

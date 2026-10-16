@@ -1,15 +1,15 @@
 {
-  "version": "2.5.0",
+  "version": "2.5.1",
   "status": "release",
   "game_build": "25201480",
   "game_sha256": "51510E2A520565DBE81FB0D569E95CD4393077ACAAA859371489B80B8128829F",
   "steam_app_id": 2288340,
-  "native_controller_version": "2.5.0 (WAR 13.8)",
+  "native_controller_version": "2.5.1 (WAR 13.8)",
   "functional_baseline": "2.4.2",
   "release_approved": true,
   "control_modes": {
     "0": "PEACE (CLASSIC 2.0, unchanged)",
-    "3": "WAR (default since 2.5.0; exact AC8 rotation-law controller, WT-style structure; degraded mode WAR v11.1)"
+    "3": "WAR (default since 2.5; exact AC8 rotation-law controller, WT-style structure; degraded mode WAR v11.1)"
   },
   "control_policy_migrations": {
     "1": 0,

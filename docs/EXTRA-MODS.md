@@ -1,4 +1,4 @@
-# 与其他 UE4SS Mod 一起使用（2.5.0 起）
+# 与其他 UE4SS Mod 一起使用（2.5 起）
 
 [返回说明首页](../README.md) · [安装](INSTALL.md) · [已知限制](LIMITATIONS.md)
 

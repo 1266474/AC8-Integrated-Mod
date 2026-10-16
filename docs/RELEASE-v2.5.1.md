@@ -1,11 +1,11 @@
-# v2.5.0 — 安装版、自动更新与默认 WAR
+# v2.5.1 — 安装版、自动更新与默认 WAR
 
 **正式版。仅限离线单人，禁止带 Mod 进入线上或多人模式。** 飞控与 v2.4.2 相同（WAR v13.8 / PEACE）。
 
 ## 更新内容
 
 - **Windows 安装版**：
-  - 新增安装程序 **AC8-Integrated-Setup-v2.5.0.exe**：按用户安装，不需要管理员权限；开始菜单有 AC8 Integrated 启动器，可在 Windows“应用”中卸载。
+  - 新增安装程序 **AC8-Integrated-Setup-v2.5.1.exe**：按用户安装，不需要管理员权限；开始菜单有 AC8 Integrated 启动器，可在 Windows“应用”中卸载。
   - 可以直接导入正在使用的便携版的设置、键位、路径和附加 Mod。
   - Steam 启动选项固定指向安装目录，以后更新不用再改。
   - 新的原生启动程序 **AC8 Integrated.exe**：启动器作为独立应用运行，从开始菜单（或便携包中双击）直接打开，不再闪出命令行窗口；任务栏显示 AC8 图标，可以固定到任务栏。
@@ -26,17 +26,18 @@
 ## 安装与升级
 
 - **推荐**：运行安装程序，按提示导入便携版设置，再把显示的一行替换进 Steam 启动选项。详见 [安装版说明](APP.md)。
-- **便携版**：下载完整的 **AC8-Integrated-v2.5.0-share.zip**，解压到游戏目录之外的新目录，双击 AC8 Integrated.exe（或运行 Setup.cmd），并替换 Steam 启动选项。
+- **已安装 2.5.0 测试版**：在启动器右上角点击“检查更新”即可升级到本版，设置和记录都会保留。
+- **便携版**：下载完整的 **AC8-Integrated-v2.5.1-share.zip**，解压到游戏目录之外的新目录，双击 AC8 Integrated.exe（或运行 Setup.cmd），并替换 Steam 启动选项。
 
 ## English summary
 
 **Stable release. Offline single-player only.** Flight control is unchanged from v2.4.2 (WAR v13.8 / PEACE).
 
-- **Windows setup program** (AC8-Integrated-Setup-v2.5.0.exe): per-user install without administrator rights, Start menu launcher (AC8 Integrated.exe runs it as its own application: no console window, AC8 icon on the taskbar, can be pinned), uninstall from Windows Settings > Apps, import of the portable package in use; the Steam launch option stays the same across updates.
+- **Windows setup program** (AC8-Integrated-Setup-v2.5.1.exe): per-user install without administrator rights, Start menu launcher (AC8 Integrated.exe runs it as its own application: no console window, AC8 icon on the taskbar, can be pinned), uninstall from Windows Settings > Apps, import of the portable package in use; the Steam launch option stays the same across updates.
 - **Updates from GitHub**: one click in the launcher, optional daily check; the signed manifest and SHA-256 are verified, only newer stable releases are installed, the previous version is kept for rollback.
 - **Self-repair**: program files are checked before every launch and restored from the cached verified package; "check and repair" also fixes unreadable settings, unfinished sessions and reports the Steam launch option. DLLs removed by security software are reported before the game starts, and `[NOT READY]` now shows the reason.
 - **WAR is the default flight control.** A saved PEACE selection moves to WAR once; switching back with F4 or `control_mode=0` is kept afterwards.
 - **Other UE4SS mods** load with this package's UE4SS; the launcher's "附加 Mod" window adds them from a zip or folder (drag and drop works), enables/disables and removes them (to a backup). The UE4SS `shared` library is included.
 - **Flight-record switch** in the launcher, off by default; sessions no longer copy the DLLs (about 28 MB per launch).
 
-See [the installed app (Chinese, English summary at the end)](APP.md). The portable share.zip remains available.
+Installed 2.5.0 test builds update to this release from the launcher (check for updates). See [the installed app (Chinese, English summary at the end)](APP.md). The portable share.zip remains available.

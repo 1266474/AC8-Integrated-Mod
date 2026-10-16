@@ -311,7 +311,7 @@ function Repair-AC8PlayerSettings([string]$DataRoot,[string]$PackageRoot){
  }
  if(Get-Command Invoke-AC8SettingsMigrations -ErrorAction SilentlyContinue){
   foreach($migration in @(Invoke-AC8SettingsMigrations $DataRoot)){
-   if($migration -eq 'war-default-2.5.0'){$report+=[pscustomobject]@{Item='飞控设置';Status='fixed';Message='2.5.0 起默认飞控为 WAR，已将启动模式设为 WAR（游戏中 F4 可切回 PEACE）。'}}
+   if($migration -eq 'war-default-2.5.0'){$report+=[pscustomobject]@{Item='飞控设置';Status='fixed';Message='2.5 起默认飞控为 WAR，已将启动模式设为 WAR（游戏中 F4 可切回 PEACE）。'}}
   }
  }
  return $report
@@ -414,6 +414,15 @@ function Register-AC8App([string]$InstallRoot,[string]$Version,[string]$Uninstal
 function Unregister-AC8App([string]$UninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AC8Integrated',[string]$Shortcut=(Get-AC8AppShortcutPath)){
  if([IO.File]::Exists($Shortcut)){[IO.File]::Delete($Shortcut)}
  if(Test-Path -LiteralPath $UninstallKey){Remove-Item -LiteralPath $UninstallKey -Recurse -Force}
+}
+function Update-AC8AppRegistration([string]$InstallRoot,[string]$Version,[string]$UninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AC8Integrated',[string]$Shortcut=(Get-AC8AppShortcutPath)){
+ # Installations registered before the native launcher keep a powershell.exe Start menu shortcut: renew it. Nothing is
+ # created for an unregistered installation (that is setup's and repair's job). Returns $true when renewed.
+ if(!(Test-Path -LiteralPath $UninstallKey)){return $false}
+ $location=(Get-ItemProperty -LiteralPath $UninstallKey -ErrorAction SilentlyContinue).InstallLocation
+ if(![string]::Equals([string]$location,$InstallRoot,[StringComparison]::OrdinalIgnoreCase)){return $false}
+ if(Test-AC8AppRegistered $InstallRoot $UninstallKey $Shortcut){return $false}
+ Register-AC8App $InstallRoot $Version $UninstallKey $Shortcut;return $true
 }
 function Test-AC8AppRegistered([string]$InstallRoot,[string]$UninstallKey='HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AC8Integrated',[string]$Shortcut=(Get-AC8AppShortcutPath)){
  if(![IO.File]::Exists($Shortcut) -or !(Test-Path -LiteralPath $UninstallKey)){return $false}

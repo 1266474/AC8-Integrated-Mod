@@ -245,6 +245,13 @@ try{
   Assert-True ($shortcut.TargetPath -eq (Join-Path $install3 'AC8 Integrated.exe') -and !$shortcut.Arguments -and $shortcut.IconLocation -match 'AC8 Integrated\.exe' -and $props.DisplayIcon -eq (Join-Path $install3 'AC8 Integrated.exe')) 'Start menu shortcut to the native launcher'
  }else{Assert-True ($shortcut.Arguments -match [regex]::Escape('"'+(Join-Path $install3 'Host.ps1')+'"') -and $shortcut.Arguments -match '-Action Gui' -and $shortcut.IconLocation -match 'AC8\.ico') 'Start menu shortcut'}
  Assert-True (Test-AC8AppRegistered $install3 $key $link) 'registered'
+ Assert-True (!(Update-AC8AppRegistration $install3 '2.5.0' $key $link)) 'a current registration is left alone'
+ if(Test-Path -LiteralPath (Join-Path $install3 'AC8 Integrated.exe')){
+  # A 2.5.0 test build: Start menu shortcut to powershell.exe, renewed when the launcher opens.
+  $old=$shell.CreateShortcut($link);$old.TargetPath=(Join-Path $PSHOME 'powershell.exe');$old.Arguments='-File Host.ps1';$old.Save()
+  Assert-True (!(Test-AC8AppRegistered $install3 $key $link) -and (Update-AC8AppRegistration $install3 '2.5.0' $key $link) -and $shell.CreateShortcut($link).TargetPath -eq (Join-Path $install3 'AC8 Integrated.exe')) 'old powershell shortcut renewed'
+ }
+ Assert-True (!(Update-AC8AppRegistration $install3 '2.5.0' ('HKCU:\Software\AC8IntegratedTest\missing-'+[guid]::NewGuid().ToString('N')) $link)) 'an unregistered installation is not registered here'
  Unregister-AC8App $key $link
  Assert-True (!(Test-Path -LiteralPath $key) -and !(Test-Path -LiteralPath $link)) 'unregistered'
 }finally{if(Test-Path -LiteralPath 'HKCU:\Software\AC8IntegratedTest'){Remove-Item -LiteralPath 'HKCU:\Software\AC8IntegratedTest' -Recurse -Force}}

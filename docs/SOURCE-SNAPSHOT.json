@@ -1,7 +1,7 @@
 {
-  "source_version": "2.5.0",
-  "snapshot_date": "2026-10-15",
-  "native_sha256": "7A58156E902C7ED7F49BDFE3A4A9FE6369B4876FD733BF5F56F8C044685F6274",
+  "source_version": "2.5.1",
+  "snapshot_date": "2026-10-16",
+  "native_sha256": "F66A8CF8A298C535B123B9857A904F9CE9241C59E92F908A032C4CB15A1783CF",
   "note": "source/MouseAim is the complete public source of the shipped DLL (build.cmd); test.cmd runs 24 native suites, test-gpu.cmd the GPU HUD test; lua/tests holds the offline HUD/HMD script tests. Extracted game data and research tooling are not included.",
   "files": [
     {
@@ -63,6 +63,22 @@
     {
       "path": "source/MouseAim/hybrid_hud_tests.cpp",
       "sha256": "c0ec349d279abcde80e28c8eedd4fb3d5e9d5b442ce75566c3fda803c26ea26a"
+    },
+    {
+      "path": "source/MouseAim/launcher/AC8-Launcher.cs",
+      "sha256": "e45fbf3d35ae4162fcbd37061d706c4bd9ad0fc9916d07b195b3f4011350c2fd"
+    },
+    {
+      "path": "source/MouseAim/launcher/AC8-Launcher.manifest",
+      "sha256": "c0afeed8c8b6d02d983a65d58d45b5b8d8f489de2f6ad21b2040457d6ec16cb3"
+    },
+    {
+      "path": "source/MouseAim/launcher/assembly-info.py",
+      "sha256": "009fa617fece9f10bf352a1938feee57972dbc41cd855c41b3c572e8ed446db7"
+    },
+    {
+      "path": "source/MouseAim/launcher/build.cmd",
+      "sha256": "304f28c080374a00d44db80d7aa8c88d2db45c312805bca9afc0210e415c672a"
     },
     {
       "path": "source/MouseAim/leveling_tests.cpp",
@@ -274,7 +290,7 @@
     },
     {
       "path": "source/MouseAim/src/mouse_aim.cpp",
-      "sha256": "5b664dca167a9997d2ceabe7757668985299cba98f0ac224113cb23fdc3d0a54"
+      "sha256": "7923553bd092c5c5aaae9df1d6eaaef0d9e5080f4aebae4526db4ae23036c467"
     },
     {
       "path": "source/MouseAim/src/native_camera.h",
