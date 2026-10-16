@@ -250,6 +250,38 @@ try{
 }finally{if(Test-Path -LiteralPath 'HKCU:\Software\AC8IntegratedTest'){Remove-Item -LiteralPath 'HKCU:\Software\AC8IntegratedTest' -Recurse -Force}}
 $checks++
 
+# ---- AC8 Integrated.exe in use (the open launcher): host files keep it with a note, uninstall waits and refuses ----
+$rootExe=Join-Path $install3 'AC8 Integrated.exe';$current3=Join-Path $install3 'versions\2.5.0'
+$newer=Join-Path $fixture 'newer-package';Copy-Item -LiteralPath $current3 -Destination $newer -Recurse
+[IO.File]::Copy((Join-Path $env:SystemRoot 'System32\PING.EXE'),(Join-Path $newer 'AC8 Integrated.exe'),$true)
+$original=if(Test-Path -LiteralPath $rootExe){[IO.File]::ReadAllBytes($rootExe)}else{$null}
+[IO.File]::Copy((Join-Path $env:SystemRoot 'System32\PING.EXE'),$rootExe,$true);[IO.File]::AppendAllText($rootExe,'x')
+$running=Start-Process -FilePath $rootExe -ArgumentList '-n','60','127.0.0.1' -WindowStyle Hidden -PassThru
+try{
+ Start-Sleep -Milliseconds 300
+ Assert-True (@(Get-AC8LauncherProcesses $install3).Count -eq 1) 'running launcher found by its path'
+ $before=(Get-FileHash -LiteralPath $rootExe).Hash
+ $watch=[Diagnostics.Stopwatch]::StartNew();$changed=@(Install-AC8HostFiles $install3 $newer 1 6>$null);$watch.Stop()
+ Assert-True ($changed -notcontains 'AC8 Integrated.exe' -and (Get-FileHash -LiteralPath $rootExe).Hash -eq $before -and $watch.Elapsed.TotalSeconds -ge 0.9) ('running launcher must be kept after waiting: '+($changed -join ','))
+ Assert-True (!@(Get-ChildItem -LiteralPath $install3 -Filter '*.tmp' -Force).Count) 'no ~RF*.TMP or temporary file next to the running exe'
+ $result=& $powershell -NoProfile -ExecutionPolicy Bypass -Command ". '$(Join-Path $template 'app\App-Core.ps1')';try{Invoke-AC8AppUninstall '$install3' `$true -NoRegister -LauncherWaitSeconds 1;'removed'}catch{[string]`$_.Exception.Data['AC8Code']}"
+ Assert-True ($result -eq 'APP_RUNNING' -and (Test-Path -LiteralPath (Join-Path $install3 'versions'))) ('uninstall with the launcher open: '+$result)
+}finally{if(!$running.HasExited){$running.Kill();[void]$running.WaitForExit(5000)}}
+# A launcher file that cannot be replaced (older Windows, security software holding it) is kept after waiting, with a note.
+[IO.File]::Copy((Join-Path $env:SystemRoot 'System32\PING.EXE'),$rootExe,$true);[IO.File]::AppendAllText($rootExe,'x');$before=(Get-FileHash -LiteralPath $rootExe).Hash
+$lock=[IO.File]::Open($rootExe,'Open','Read','Read')
+try{
+ $watch=[Diagnostics.Stopwatch]::StartNew();$changed=@(Install-AC8HostFiles $install3 $newer 1 6>$null);$watch.Stop()
+ Assert-True ($changed -notcontains 'AC8 Integrated.exe' -and $watch.Elapsed.TotalSeconds -ge 0.9 -and !@(Get-ChildItem -LiteralPath $install3 -Filter '*.tmp' -Force).Count) ('locked exe must be kept after waiting: '+($changed -join ','))
+}finally{$lock.Dispose()}
+Assert-True ((Get-FileHash -LiteralPath $rootExe).Hash -eq $before) 'locked exe unchanged'
+[IO.File]::WriteAllText((Join-Path $install3 'AC8 Integrated.exe~RF1234abc.TMP'),'old image')
+$changed=@(Install-AC8HostFiles $install3 $newer 1 6>$null)
+Assert-True (!(Test-Path -LiteralPath (Join-Path $install3 'AC8 Integrated.exe~RF1234abc.TMP'))) 'leftover of an earlier replacement removed'
+Assert-True ($changed -contains 'AC8 Integrated.exe' -and (Get-FileHash -LiteralPath $rootExe).Hash -eq (Get-FileHash -LiteralPath (Join-Path $newer 'AC8 Integrated.exe')).Hash) 'exe replaced once the launcher has closed'
+if($original){[IO.File]::WriteAllBytes($rootExe,$original)}else{Remove-Item -LiteralPath $rootExe}
+$checks++
+
 # ---- release signing scripts ----
 $keyDir=Join-Path ([IO.Path]::GetTempPath()) ('ac8-signing-test-'+[guid]::NewGuid().ToString('N'));$private=Join-Path $keyDir 'key.dpapi';$public=Join-Path $fixture 'release-key.xml'
 try{
@@ -320,4 +352,4 @@ if(Test-Path -LiteralPath (Join-Path $env:SystemRoot 'System32\iexpress.exe')){
 
 $rsa.Dispose();$other.Dispose()
 Remove-AC8Tree $fixture
-Write-Host "PASS installed app: $checks groups (setup and data layout, mod mode, host status, portable import, signed updates with 8 refusals, rollback, offline/online repair, pruning and uninstall, registration, signing scripts, launcher update check, launch diagnostics, setup program)"
+Write-Host "PASS installed app: $checks groups (setup and data layout, mod mode, host status, portable import, signed updates with 8 refusals, rollback, offline/online repair, pruning and uninstall, registration, signing scripts, launcher update check, launch diagnostics, setup program, launcher in use)"

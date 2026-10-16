@@ -212,14 +212,45 @@ function Get-AC8PackageCache([string]$InstallRoot,[string]$Version){
  if([string]$info.version -ne $Version -or ![IO.File]::Exists($zip) -or (Get-AC8AppHash $zip) -ne [string]$info.sha256){return $null}
  return $zip
 }
-function Install-AC8HostFiles([string]$InstallRoot,[string]$PackageRoot){
+function Get-AC8LauncherProcesses([string]$InstallRoot){
+ # AC8 Integrated.exe processes started from this installation (the open launcher).
+ $launcher=[IO.Path]::GetFullPath([IO.Path]::Combine($InstallRoot,'AC8 Integrated.exe'))
+ return @(Get-Process -Name 'AC8 Integrated' -ErrorAction SilentlyContinue | Where-Object {$path=$null;try{$path=$_.Path}catch{};$path -and [string]::Equals([IO.Path]::GetFullPath($path),$launcher,[StringComparison]::OrdinalIgnoreCase)})
+}
+function Install-AC8HostFiles([string]$InstallRoot,[string]$PackageRoot,[int]$LauncherWaitSeconds=10){
  $app=[IO.Path]::Combine($PackageRoot,'app');$changed=@()
  foreach($pair in @(@('Host.ps1','Host.ps1'),@('App-Core.ps1','App-Core.ps1'),@('Start-AC8-From-Steam.cmd','Start-AC8-From-Steam.cmd'),@('update-key.xml','trust\update-key.xml'))){
   if(Copy-AC8AppFile ([IO.Path]::Combine($app,$pair[0])) ([IO.Path]::Combine($InstallRoot,$pair[1]))){$changed+=$pair[1]}
  }
- # AC8 Integrated.exe (package root): the launcher as its own application, the Start menu entry.
+ # AC8 Integrated.exe (package root): the launcher as its own application, the Start menu entry. It is not replaced while a
+ # launcher from this installation runs (Windows would keep the running program as "AC8 Integrated.exe~RF*.TMP"): the
+ # check before every launch runs inside it and leaves it alone; another one gets a few seconds to exit (the launcher
+ # closing for an update). Otherwise the old exe stays - it only starts Host.ps1 / Launcher-GUI.ps1 - and is replaced by
+ # the next update, repair or setup. A file held by other software is treated the same way.
  $launcher=[IO.Path]::Combine($PackageRoot,'AC8 Integrated.exe')
- if([IO.File]::Exists($launcher) -and (Copy-AC8AppFile $launcher ([IO.Path]::Combine($InstallRoot,'AC8 Integrated.exe')))){$changed+='AC8 Integrated.exe'}
+ if([IO.File]::Exists($launcher)){
+  $target=[IO.Path]::Combine($InstallRoot,'AC8 Integrated.exe')
+  if(![IO.File]::Exists($target) -or (Get-AC8AppHash $target) -ne (Get-AC8AppHash $launcher)){
+   $deadline=[DateTime]::UtcNow.AddSeconds($LauncherWaitSeconds);$note='提示：AC8 Integrated.exe 正在使用（启动器还开着），这次没有替换；关闭启动器后运行“检查并修复”即可更新。'
+   while($true){
+    $running=@(Get-AC8LauncherProcesses $InstallRoot)
+    if($running.Count){
+     if(@($running | Where-Object {$_.Id -eq $PID}).Count){break}
+     if([DateTime]::UtcNow -ge $deadline){Write-Host $note -ForegroundColor Yellow;break}
+     Start-Sleep -Milliseconds 250;continue
+    }
+    try{if(Copy-AC8AppFile $launcher $target){$changed+='AC8 Integrated.exe'};break}
+    catch{
+     # Windows PowerShell 5.1 wraps exceptions of .NET methods in MethodInvocationException.
+     $inner=$_.Exception;while($inner -is [Management.Automation.MethodInvocationException] -and $inner.InnerException){$inner=$inner.InnerException}
+     if($inner -isnot [IO.IOException] -and $inner -isnot [UnauthorizedAccessException]){throw}
+     if([DateTime]::UtcNow -ge $deadline){Write-Host $note -ForegroundColor Yellow;break}
+     Start-Sleep -Milliseconds 250
+    }
+   }
+  }
+  foreach($old in @(Get-ChildItem -LiteralPath $InstallRoot -Filter 'AC8 Integrated.exe~RF*.TMP' -Force -ErrorAction SilentlyContinue)){try{Remove-AC8Tree $old.FullName}catch{}}
+ }
  return $changed
 }
 function Remove-AC8OldVersions([string]$InstallRoot){
@@ -525,7 +556,8 @@ function Invoke-AC8AppRepair{
  $hostSource=$null
  foreach($version in $installed){$candidate=[IO.Path]::Combine($InstallRoot,'versions',$version);if(!@(Get-AC8PackageFileProblems $candidate).Count){$hostSource=$candidate;break}}
  if($hostSource){
-  $changed=@(Install-AC8HostFiles $InstallRoot $hostSource)
+  # Before a launch (-Quick) nothing waits for an open launcher.
+  $changed=@(Install-AC8HostFiles $InstallRoot $hostSource $(if($Quick){0}else{10}))
   if($changed.Count){[void]$findings.Add([pscustomobject]@{Item='启动入口';Status='fixed';Message=('已恢复 '+($changed -join '、')+'。')})}
  }
  if($Quick){return @($findings)}
@@ -585,11 +617,17 @@ function Invoke-AC8AppRollback([string]$InstallRoot,[switch]$NoRegister){
  if(!$NoRegister -and (Test-AC8AppRegistered $InstallRoot)){Set-ItemProperty -LiteralPath 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\AC8Integrated' -Name DisplayVersion -Value $previous}
  return $report
 }
-function Invoke-AC8AppUninstall([string]$InstallRoot,[bool]$KeepData=$true,[switch]$NoRegister){
+function Invoke-AC8AppUninstall([string]$InstallRoot,[bool]$KeepData=$true,[switch]$NoRegister,[int]$LauncherWaitSeconds=10){
  # Game folder first: an unfinished session is cleaned with the installed package; loader files that cannot be
  # attributed stop the uninstall. Only the app's own entries are removed; the folder itself only when empty.
  if(![IO.File]::Exists([IO.Path]::Combine($InstallRoot,'app.json')) -or ![IO.Directory]::Exists([IO.Path]::Combine($InstallRoot,'versions'))){Stop-AC8App 'APP_LAYOUT' ('这里不是 AC8 Integrated 的安装目录：'+$InstallRoot)}
  $busy=Get-AC8AppBusyReason $InstallRoot -AllowSession;if($busy){Stop-AC8App 'APP_BUSY' $busy}
+ # The open launcher keeps AC8 Integrated.exe in use; give a closing one a few seconds.
+ $deadline=[DateTime]::UtcNow.AddSeconds($LauncherWaitSeconds)
+ while(@(Get-AC8LauncherProcesses $InstallRoot).Count){
+  if([DateTime]::UtcNow -ge $deadline){Stop-AC8App 'APP_RUNNING' 'AC8 Integrated 启动器还开着，已停止卸载。' '请先关闭启动器窗口，再卸载。'}
+  Start-Sleep -Milliseconds 250
+ }
  $data=[IO.Path]::Combine($InstallRoot,'data');$session=[IO.Path]::Combine($data,'active-session.json')
  $package=$null;try{$package=Get-AC8CurrentPackage $InstallRoot}catch{$package=$null}
  if([IO.File]::Exists($session)){
