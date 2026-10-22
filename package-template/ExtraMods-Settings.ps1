@@ -10,8 +10,9 @@ function Get-AC8ModTreeLinks([string]$Path) {
  return @(Get-ChildItem -LiteralPath $Path -Recurse -Force | Where-Object {$_.Attributes -band $link} | ForEach-Object {$_.FullName})
 }
 function Test-AC8ModSkippedFile([string]$Name) {
- # Never installed with a mod: the UE4SS loader itself (this package brings its own) and Pak assets (loaded by the game).
- return ($Name -in @('dwmapi.dll','UE4SS.dll','UE4SS-settings.ini','xinput1_3.dll')) -or ([IO.Path]::GetExtension($Name) -in @('.pak','.utoc','.ucas'))
+ # Never installed with a mod: the UE4SS loader itself (this package brings its own). Pak/IoStore files inside a mod
+ # folder belong to that mod (PW-MkI: AC8OverrideLoader\payloads mounts them itself) and are installed with it (2.5.2).
+ return ($Name -in @('dwmapi.dll','UE4SS.dll','UE4SS-settings.ini','xinput1_3.dll'))
 }
 function Copy-AC8ModTree([string]$Source,[string]$Destination) {
  [void][IO.Directory]::CreateDirectory($Destination)
@@ -92,9 +93,11 @@ function New-AC8ExtraModPlan([string]$DataRoot,[string]$Source) {
   $items+=[pscustomobject]@{Name=$name;Kind=$root.Kind;Path=$root.Path;Problem=$problem;Existing=$existing}
  }
  $files=@(Get-ChildItem -LiteralPath $scan -Recurse -File -Force)
- $loader=@($files | Where-Object {(Test-AC8ModSkippedFile $_.Name) -and $_.Extension -notin @('.pak','.utoc','.ucas')} | ForEach-Object Name | Select-Object -Unique)
+ $loader=@($files | Where-Object {Test-AC8ModSkippedFile $_.Name} | ForEach-Object Name | Select-Object -Unique)
  if($loader.Count){$warnings+=('含有 UE4SS 本体文件（'+($loader -join '、')+'），不会安装：本整合包已经自带 UE4SS。')}
- if(@($files | Where-Object {$_.Extension -in @('.pak','.utoc','.ucas')}).Count){$warnings+='含有 .pak 资源文件，不会安装：Pak 由游戏自身加载，需要时请按该 Mod 的说明手动放入游戏目录。'}
+ # Only Pak files outside every mod folder are left out (game Paks such as LogicMods or ~mods).
+ $roots=@($items | ForEach-Object {$_.Path.TrimEnd('\')+'\'})
+ if(@($files | Where-Object {$_.Extension -in @('.pak','.utoc','.ucas')} | Where-Object {$file=$_.FullName;!@($roots | Where-Object {$file.StartsWith($_,[StringComparison]::OrdinalIgnoreCase)}).Count}).Count){$warnings+='含有 .pak 资源文件，不会安装：Pak 由游戏自身加载，需要时请按该 Mod 的说明手动放入游戏目录。'}
  $shared=@(Get-ChildItem -LiteralPath $scan -Recurse -Directory -Force -Filter 'shared' | ForEach-Object {Get-ChildItem -LiteralPath $_.FullName -Directory -Force} | Where-Object {$_.Name -ne 'UEHelpers'} | ForEach-Object Name | Select-Object -Unique)
  if($shared.Count){$warnings+=('含有共享库（'+($shared -join '、')+'），不会安装：本包只附带 UEHelpers，依赖其他共享库的 Mod 可能无法工作。')}
  if(@($items | Where-Object {!$_.Problem -and $_.Kind -match 'C\+\+'}).Count){$warnings+='C++ Mod 会在游戏中运行原生代码：只安装可信来源的 Mod，并确认它适用于本包的 UE4SS 版本（3.0.1 实验版 e3ba1016），否则可能无法加载或导致崩溃。'}

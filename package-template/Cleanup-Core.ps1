@@ -28,6 +28,28 @@ function Assert-AC8Snapshot([string]$Path,$Expected) {
  $actual=@(Get-AC8Snapshot $Path)
  if(($actual | ConvertTo-Json -Depth 4 -Compress) -ne (@($Expected) | ConvertTo-Json -Depth 4 -Compress)){throw "Contents changed or backup verification failed: $Path"}
 }
+function Remove-AC8DeployedExtraMods([string]$Win64,$State) {
+ # Extra UE4SS mods are copies of the player's ue4ss-mods (2.5.2). A deployed file identical to its original (size and
+ # SHA-256) is removed; anything the mod wrote or changed stays and is archived with the rest. Large mods (PW-MkI: about
+ # 0.7 GB) therefore do not grow cleanup-backups on every launch.
+ $mods=[IO.Path]::GetFullPath((Join-Path $Win64 'ue4ss\Mods'))
+ foreach($mod in @($State.ExtraMods)){
+  if(!$mod -or [string]$mod.Name -notmatch '^[A-Za-z0-9][A-Za-z0-9_.\-]{0,63}$' -or @('AC8MouseAim','AC8SourceInit','shared') -contains [string]$mod.Name){continue}
+  $deployed=Join-Path $mods ([string]$mod.Name);$source=[string]$mod.Source
+  if(!(Test-Path -LiteralPath $deployed -PathType Container) -or !$source -or !(Test-Path -LiteralPath $source -PathType Container)){continue}
+  if(@(Get-ChildItem -LiteralPath $deployed -Recurse -Force | Where-Object {$_.Attributes -band [IO.FileAttributes]::ReparsePoint}).Count -or ((Get-Item -LiteralPath $deployed -Force).Attributes -band [IO.FileAttributes]::ReparsePoint)){continue}
+  $base=(Get-Item -LiteralPath $deployed).FullName.TrimEnd('\')
+  foreach($file in @(Get-ChildItem -LiteralPath $base -Recurse -File -Force)){
+   $original=Join-Path $source $file.FullName.Substring($base.Length+1)
+   if(!(Test-Path -LiteralPath $original -PathType Leaf)){continue}
+   $item=Get-Item -LiteralPath $original -Force
+   if($item.Attributes -band [IO.FileAttributes]::ReparsePoint -or $item.Length -ne $file.Length){continue}
+   if((Get-AC8FileHash -LiteralPath $original).Hash -eq (Get-AC8FileHash -LiteralPath $file.FullName).Hash){Remove-Item -LiteralPath $file.FullName -Force}
+  }
+  foreach($dir in @(Get-ChildItem -LiteralPath $base -Recurse -Directory -Force | Sort-Object {$_.FullName.Length} -Descending)){if(!@(Get-ChildItem -LiteralPath $dir.FullName -Force).Count){Remove-Item -LiteralPath $dir.FullName -Force}}
+  if(!@(Get-ChildItem -LiteralPath $base -Force).Count){Remove-Item -LiteralPath $base -Force}
+ }
+}
 function Invoke-AC8Cleanup {
  param([string]$GameRoot,[string]$BackupRoot,$State,[switch]$RecoverHistorical,[switch]$CheckOnly)
  if(Get-Process -Name AceCombat8 -ErrorAction SilentlyContinue){throw 'Close AC8 normally before cleanup.'}
@@ -63,6 +85,7 @@ function Invoke-AC8Cleanup {
    }
   }
  }
+ if($State -and !$CheckOnly -and $State.PSObject.Properties['ExtraMods']){Remove-AC8DeployedExtraMods $w64 $State}
  # Validate every item before any mutation. Unknown/changed loaders are never removed.
  $plans=@()
  foreach($name in $present){

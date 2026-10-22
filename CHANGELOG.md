@@ -1,3 +1,9 @@
+## 2.5.2
+
+- Extra-mod manager: Pak/IoStore files inside a mod folder are installed with the mod (PW-MkI: AC8OverrideLoader\payloads mounts them); only Pak files outside every mod folder are left out with a note. The zip's own UE4SS loader is still never installed.
+- Cleanup: deployed extra-mod files identical (size, SHA-256) to ue4ss-mods are removed before the archive (Remove-AC8DeployedExtraMods; the session record lists the deployed extra mods); files the mod wrote or changed are archived as before.
+- Tests: PW-MkI-shaped zip and cleanup of deployed copies in Test-ExtraModsManager. Version 2.5.2; flight control unchanged.
+
 ## 2.5.1
 
 - First public release of the 2.5 line (the entries under 2.5.0 below). 2.5.0 was a small test build; installed copies update to 2.5.1 from the launcher.

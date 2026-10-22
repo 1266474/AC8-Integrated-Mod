@@ -10,7 +10,7 @@
 
 - **添加**：点击“添加 zip…”选择下载的 Mod 压缩包，或点击“添加文件夹…”选择解压后的文件夹；也可以把 zip 或文件夹直接拖进窗口。
   - 会自动找到含 `Scripts\main.lua`（Lua Mod）或 `dlls\main.dll`（C++ Mod）的文件夹，常见的 `Mods\SomeMod\…`、`ue4ss\Mods\SomeMod\…` 打包方式都可以；一个压缩包里有多个 Mod 时一起添加。
-  - 添加前会列出将要安装的 Mod 和注意事项，确认后才安装。压缩包里的 UE4SS 本体（`dwmapi.dll`、`UE4SS.dll`）和 `.pak` 资源不会安装。
+  - 添加前会列出将要安装的 Mod 和注意事项，确认后才安装。压缩包里的 UE4SS 本体（`dwmapi.dll`、`UE4SS.dll`）不会安装；Mod 文件夹里自带的 `.pak`／`.utoc`／`.ucas` 资源（例如 PW-MkI 的 `AC8OverrideLoader\payloads`）随 Mod 一起安装，Mod 文件夹以外的游戏 Pak 不会安装。
   - 已有同名 Mod 时会替换，旧版本移到 `ue4ss-mods-removed`，原来的启用／停用状态保持不变。
   - 只支持 zip；7z、rar 请先解压，再用“添加文件夹…”。
 - **启用／停用**：每个 Mod 右侧的按钮，停用就是在文件夹名前加 `_`。

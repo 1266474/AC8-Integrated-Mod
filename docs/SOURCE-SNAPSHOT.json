@@ -1,7 +1,7 @@
 {
-  "source_version": "2.5.1",
-  "snapshot_date": "2026-10-16",
-  "native_sha256": "F66A8CF8A298C535B123B9857A904F9CE9241C59E92F908A032C4CB15A1783CF",
+  "source_version": "2.5.2",
+  "snapshot_date": "2026-10-22",
+  "native_sha256": "1F0644A5CAAE181428E45F73450C75FEACBCB4CD92EBAF2655098EAFA7494AB6",
   "note": "source/MouseAim is the complete public source of the shipped DLL (build.cmd); test.cmd runs 24 native suites, test-gpu.cmd the GPU HUD test; lua/tests holds the offline HUD/HMD script tests. Extracted game data and research tooling are not included.",
   "files": [
     {
@@ -290,7 +290,7 @@
     },
     {
       "path": "source/MouseAim/src/mouse_aim.cpp",
-      "sha256": "7923553bd092c5c5aaae9df1d6eaaef0d9e5080f4aebae4526db4ae23036c467"
+      "sha256": "7cbefe78815c1e16667a412b812e058b31e9accbc199e1e5c41fb38674d7b757"
     },
     {
       "path": "source/MouseAim/src/native_camera.h",

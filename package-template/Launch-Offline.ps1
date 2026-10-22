@@ -113,7 +113,7 @@ $payload=Join-Path $root 'payload/Game/Binaries/Win64'
 $sha=[Security.Cryptography.SHA256]::Create()
 try{$appidHash=[BitConverter]::ToString($sha.ComputeHash([Text.Encoding]::ASCII.GetBytes("2288340`r`n"))).Replace('-','')}finally{$sha.Dispose()}
 $planned=@([pscustomobject]@{Name='dwmapi.dll';SHA256=(Get-AC8FileHash -LiteralPath (Join-Path $payload 'dwmapi.dll')).Hash},[pscustomobject]@{Name='steam_appid.txt';SHA256=$appidHash})
-$state=[pscustomobject]@{Id=$id;Win64=$w64;Results=$results;Files=$planned;PID=$null}
+$state=[pscustomobject]@{Id=$id;Win64=$w64;Results=$results;Files=$planned;PID=$null;ExtraMods=@()}
 Write-AC8Json $state $statePath
 $launchFailure=$null
 $stage='准备加载器'
@@ -122,6 +122,9 @@ try {
  Set-Content -LiteralPath (Join-Path $w64 'ue4ss/AC8SourceInit-owner.txt') -Value $id -Encoding ASCII
  $extraMods=@(Get-AC8ExtraMods $data)
  Install-SelectedUE4SS (Join-Path $payload 'ue4ss') (Join-Path $w64 'ue4ss') $features $extraMods
+ # Cleanup removes deployed extra-mod copies that still match ue4ss-mods instead of archiving them (2.5.2).
+ $state.ExtraMods=@($extraMods | Where-Object {!$_.Problem} | ForEach-Object {[pscustomobject]@{Name=$_.Name;Source=$_.Path}})
+ Write-AC8Json $state $statePath
  Apply-MouseSettings $mouseSettings (Join-Path $w64 'ue4ss/Mods/AC8MouseAim')
  . (Join-Path $root 'Keybinding-Settings.ps1')
  $bindings=Read-AC8Keybindings (Join-Path $data 'Keybindings.ini')

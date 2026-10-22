@@ -81,6 +81,37 @@ $plan=New-AC8ExtraModPlan $data (New-TestZip 'dup.zip' @{'a/ModD/Scripts/main.lu
 Assert-True (@($plan.Items | Where-Object Problem).Count -eq 1 -and @($plan.Items | Where-Object {!$_.Problem}).Count -eq 1) 'duplicate names in one source';Remove-AC8ExtraModPlan $plan
 $checks++
 
+# ---- 2.5.2: a mod that mounts its own IoStore assets (PW-MkI layout) is installed complete ----
+$pw=New-TestZip 'PW-Like-1.1.3.zip' @{'PW/Runtime/dwmapi.dll'='x';'PW/Runtime/ue4ss/UE4SS.dll'='x';'PW/Runtime/ue4ss/Mods/mods.txt'='x';
+ 'PW/Runtime/ue4ss/Mods/AC8OverrideLoader/dlls/main.dll'='dll';'PW/Runtime/ue4ss/Mods/AC8OverrideLoader/dlls/feature.enabled'='on';
+ 'PW/Runtime/ue4ss/Mods/AC8OverrideLoader/payloads/PWMkI/Asset_P.pak'='pak';'PW/Runtime/ue4ss/Mods/AC8OverrideLoader/payloads/PWMkI/Asset_P.ucas'='ucas';
+ 'PW/Runtime/ue4ss/Mods/AC8OverrideLoader/payloads/PWMkI/Asset_P.utoc'='utoc';'PW/Runtime/ue4ss/Mods/PWMkI/Scripts/main.lua'='print(1)'}
+$plan=New-AC8ExtraModPlan $data $pw;$byName=@{};foreach($item in $plan.Items){$byName[$item.Name]=$item}
+Assert-True (@($plan.Items).Count -eq 2 -and $byName['AC8OverrideLoader'].Kind -eq 'C++' -and $byName['PWMkI'].Kind -eq 'Lua') 'PW-like mods found'
+Assert-True (($plan.Warnings -join ' ') -notmatch '\.pak' -and ($plan.Warnings -join ' ') -match 'UE4SS\.dll') ('pak inside a mod is not a warning: '+($plan.Warnings -join ' | '))
+$results=@(Install-AC8ExtraModPlan $plan $data $true);Remove-AC8ExtraModPlan $plan
+foreach($rel in 'AC8OverrideLoader\payloads\PWMkI\Asset_P.pak','AC8OverrideLoader\payloads\PWMkI\Asset_P.ucas','AC8OverrideLoader\payloads\PWMkI\Asset_P.utoc','AC8OverrideLoader\dlls\feature.enabled','PWMkI\Scripts\main.lua'){Assert-True (Test-Path -LiteralPath (Join-Path $mods $rel)) ('missing after install: '+$rel)}
+Assert-True (!@(Get-ChildItem -LiteralPath $mods -Recurse -Force -File | Where-Object {$_.Name -in @('dwmapi.dll','UE4SS.dll')}).Count) 'UE4SS loader of the zip not installed'
+$checks++
+
+# ---- 2.5.2: at cleanup, deployed copies identical to ue4ss-mods are removed; what the mod wrote stays for the archive ----
+. (Join-Path $template 'Cleanup-Core.ps1')
+$w64=Join-Path $fixture 'game\Game\Binaries\Win64';$deployed=Join-Path $w64 'ue4ss\Mods';New-Item -ItemType Directory -Path $deployed -Force | Out-Null
+foreach($name in 'AC8OverrideLoader','PWMkI','ModB'){Copy-Item -LiteralPath (Join-Path $mods $name) -Destination (Join-Path $deployed $name) -Recurse}
+[IO.File]::WriteAllText((Join-Path $deployed 'PWMkI\Scripts\runtime.log'),'written by the mod')
+[IO.File]::WriteAllText((Join-Path $deployed 'ModB\dlls\main.dll'),'changed while running')
+Copy-Item -LiteralPath (Join-Path $mods 'ModA') -Destination (Join-Path $deployed 'AC8MouseAim') -Recurse
+$state=[pscustomobject]@{ExtraMods=@(
+ [pscustomobject]@{Name='AC8OverrideLoader';Source=(Join-Path $mods 'AC8OverrideLoader')},[pscustomobject]@{Name='PWMkI';Source=(Join-Path $mods 'PWMkI')},
+ [pscustomobject]@{Name='ModB';Source=(Join-Path $mods 'ModB')},[pscustomobject]@{Name='AC8MouseAim';Source=(Join-Path $mods 'ModA')},[pscustomobject]@{Name='..\escape';Source=$mods})}
+Remove-AC8DeployedExtraMods $w64 $state
+Assert-True (!(Test-Path -LiteralPath (Join-Path $deployed 'AC8OverrideLoader'))) 'identical copy (with its payload) removed instead of archived'
+Assert-True ((Test-Path -LiteralPath (Join-Path $deployed 'PWMkI\Scripts\runtime.log')) -and !(Test-Path -LiteralPath (Join-Path $deployed 'PWMkI\Scripts\main.lua'))) 'file written by the mod kept, identical file removed'
+Assert-True (Test-Path -LiteralPath (Join-Path $deployed 'ModB\dlls\main.dll')) 'changed file kept for the archive'
+Assert-True (Test-Path -LiteralPath (Join-Path $deployed 'AC8MouseAim\Scripts\main.lua')) "this package's own mod names are never touched"
+Assert-True ((Test-Path -LiteralPath (Join-Path $mods 'AC8OverrideLoader\payloads\PWMkI\Asset_P.ucas')) -and (Test-Path -LiteralPath (Join-Path $mods 'PWMkI\Scripts\main.lua'))) 'originals in ue4ss-mods untouched'
+$checks++
+
 # ---- the launcher dialog through its real buttons and commands ----
 Add-Type -AssemblyName PresentationFramework,PresentationCore,WindowsBase
 . (Join-Path $template 'CreeperUX-Theme.ps1')
@@ -89,7 +120,7 @@ $tokens=Get-Content -LiteralPath (Join-Path $template 'ui/creeperux/tokens.json'
 foreach($theme in 'dark','light'){
  $ctx=New-AC8ExtraModsDialog $data $null $theme
  if(![Windows.SystemParameters]::HighContrast){Assert-True ($ctx.Window.Resources['CxBg'].Color -eq (Convert-CxColor $tokens.color.bg.$theme)) "dialog theme $theme"}
- Assert-True ($ctx.Rows.Children.Count -eq 3 -and $ctx.Empty.Visibility -eq 'Collapsed') 'one row per mod'
+ Assert-True ($ctx.Rows.Children.Count -eq @(Get-AC8ExtraMods $data).Count -and $ctx.Empty.Visibility -eq 'Collapsed') 'one row per mod'
  $ctx.Window.Content.Measure([Windows.Size]::new(860,720));$ctx.Window.Content.Arrange([Windows.Rect]::new(0,0,860,720));$ctx.Window.Content.UpdateLayout()
 }
 $global:AC8ModTestConfirm=@()
@@ -101,9 +132,9 @@ $row=@($ctx.Rows.Children | Where-Object {$_.Children[1].Tag -eq '_ModB'})[0]
 Assert-True ([string]$row.Children[1].Content -eq '启用') 'disabled row offers enable'
 $row=@($ctx.Rows.Children | Where-Object {$_.Children[2].Tag -eq 'ModC'})[0]
 $row.Children[2].RaiseEvent([Windows.RoutedEventArgs]::new([Windows.Controls.Button]::ClickEvent))
-Assert-True (!(Test-Path -LiteralPath (Join-Path $mods 'ModC')) -and $global:AC8ModTestConfirm[-1][0] -eq '删除附加 Mod' -and $ctx.Rows.Children.Count -eq 2) 'remove button with confirmation'
+Assert-True (!(Test-Path -LiteralPath (Join-Path $mods 'ModC')) -and $global:AC8ModTestConfirm[-1][0] -eq '删除附加 Mod' -and $ctx.Rows.Children.Count -eq @(Get-AC8ExtraMods $data).Count) 'remove button with confirmation'
 & $ctx.Commands.Add $ctx (New-TestZip 'ModE.zip' @{'ModE/Scripts/main.lua'='x';'ModE/ue4ss/dwmapi.dll'='x'})
-Assert-True ((Test-Path -LiteralPath (Join-Path $mods 'ModE\Scripts\main.lua')) -and $global:AC8ModTestConfirm[-1][1] -match 'ModE' -and $global:AC8ModTestConfirm[-1][1] -match 'dwmapi\.dll' -and $ctx.Rows.Children.Count -eq 3) ('add from a zip: '+$ctx.Status.Text)
+Assert-True ((Test-Path -LiteralPath (Join-Path $mods 'ModE\Scripts\main.lua')) -and $global:AC8ModTestConfirm[-1][1] -match 'ModE' -and $global:AC8ModTestConfirm[-1][1] -match 'dwmapi\.dll' -and $ctx.Rows.Children.Count -eq @(Get-AC8ExtraMods $data).Count) ('add from a zip: '+$ctx.Status.Text)
 $ctx.Commands.Confirm={param($Owner,$Message,$Title,$Action) return $false}
 & $ctx.Commands.Add $ctx (New-TestZip 'ModF.zip' @{'ModF/Scripts/main.lua'='x'})
 Assert-True (!(Test-Path -LiteralPath (Join-Path $mods 'ModF')) -and !@(Get-ChildItem -LiteralPath (Join-Path $data 'ue4ss-mods-staging') -Force).Count) 'cancelled add changes nothing'
