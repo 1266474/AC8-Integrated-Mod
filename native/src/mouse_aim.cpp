@@ -1241,7 +1241,26 @@ extern "C" __declspec(dllexport) int ac8_mouseaim_release(void*) {
     return 0;
 }
 
-extern "C" __declspec(dllexport) int ac8_mouseaim_perf(void*) {
+extern "C" __declspec(dllexport) int ac8_mouseaim_perf(lua_State* state) {
+    // Optional paired PW profiling, sharing the existing export. Calls without
+    // arguments retain the F5 toggle contract. All values use monotonic QPC.
+    if(state){
+        LuaView lua(state);
+        const auto n=lua.get_stack_size();
+        if(n==1){
+            double v[1]{};if(!read_numbers(lua,v))return 0;
+            if(v[0]==4){lua.set_number(2);return 1;} // protocol version
+            if(v[0]!=2)return 0;
+            lua.set_number(running.load()&&perf_enabled.load()?double(perf_us(perf_clock())):0);return 1;
+        }
+        if(n==3){
+            double v[3]{};if(!read_numbers(lua,v)||v[0]!=3||v[1]<0||v[1]>=64||v[1]!=std::floor(v[1])||v[2]<=0)return 0;
+            const double elapsed=double(perf_us(perf_clock()))-v[2];
+            if(running.load()&&perf_enabled.load()&&elapsed>=0&&elapsed<60000000)perf_pw_callbacks[size_t(v[1])].add(static_cast<unsigned long long>(elapsed));
+            return 0;
+        }
+        if(n!=0)return 0;
+    }
     if(running.load()) {
         const bool enabled_now=!perf_enabled.load(); perf_enabled.store(enabled_now);
         if(!enabled_now) perf_flush.store(true);

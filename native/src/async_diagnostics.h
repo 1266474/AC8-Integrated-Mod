@@ -1,6 +1,8 @@
 #pragma once
 
-std::atomic<bool> perf_enabled{false};
+// Keep bounded 10-second summaries on for this investigation build. F5 still
+// toggles capture. No per-frame file writes or formatting on input producers.
+std::atomic<bool> perf_enabled{true};
 std::atomic<bool> perf_flush{false};
 struct PerfCounter {
     std::atomic<unsigned long long> count{0},total_us{0},max_us{0};
@@ -14,6 +16,8 @@ struct PerfCounter {
 PerfCounter perf_script,perf_bridge,perf_camera,perf_frame_gap;
 PerfCounter perf_raw_callback,perf_raw_input_wait,perf_fallback_plan,perf_exact_solver;
 PerfCounter perf_lua_callback;
+PerfCounter perf_camera_host;
+std::array<PerfCounter,64> perf_pw_callbacks;
 std::atomic<unsigned long long> perf_unfinished_callbacks{0};
 std::atomic<unsigned long long> perf_other_inputs{0},perf_player_inputs{0},perf_hitches{0};
 LARGE_INTEGER perf_frequency{};
@@ -106,6 +110,13 @@ void logger_loop() {
             report_counter("fallback_plan",perf_fallback_plan,emit);
             report_counter("exact_solver",perf_exact_solver,emit);
             report_counter("lua_callback_wall",perf_lua_callback,emit);
+            report_counter("camera_host_update",perf_camera_host,emit);
+            for(size_t i=0;i<perf_pw_callbacks.size();++i){
+                auto& c=perf_pw_callbacks[i];
+                if(!c.count.load(std::memory_order_relaxed))continue;
+                char label[40]{};snprintf(label,sizeof(label),"pw_callback_%zu",i);
+                report_counter(label,c,emit);
+            }
             const auto unfinished=perf_unfinished_callbacks.exchange(0);
             if(emit||unfinished)log_line("PERF lua_callback_unfinished=%llu (missing finish, incomplete samples excluded)",unfinished);
             const auto other=perf_other_inputs.exchange(0),player=perf_player_inputs.exchange(0);

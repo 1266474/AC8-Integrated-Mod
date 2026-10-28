@@ -116,7 +116,7 @@ bool apply_native_camera(void* manager,const CameraCommand& cmd,int mode,CameraS
     } __except(EXCEPTION_EXECUTE_HANDLER) { native_camera_reject=CAM_EXCEPTION; return false; }
 }
 void __fastcall update_native_camera(void* manager,float dt) {
-    original_camera_update(manager,dt);
+    {PerfSpan host_timing(perf_camera_host);original_camera_update(manager,dt);}
     PerfSpan timing(perf_camera);
     if(!running.load() || !active.load() || !enabled.load() || game_paused.load() || gaze_active.load() || context_suspended.load()) return;
     CameraCommand cmd;

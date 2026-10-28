@@ -57,3 +57,20 @@ BA01A751EA0F09F1B0A2F4A73C758389B59F8AD30973293D4AC7CEC0D48C9E28
 ## 许可与来源
 
 保留仓库根 [LICENSE](../../LICENSE) 和 [THIRD_PARTY_NOTICES.md](../../THIRD_PARTY_NOTICES.md)；本次新增原创修订工具沿用根MIT许可，既有第三方代码保留原许可。PW-MkI及其发行版文件的权利仍属于原作者；本工具不分发或重新许可其二进制、模型、音频、纹理或其他游戏资源。测试依赖Lupa单独安装，不随仓库分发。
+
+## 第二版：PW 专属负载与 SP 导弹
+
+当前源码包含第二版，详见 [REVISION2.md](REVISION2.md)。BLMU 使用原生 `HomingForesightAmount=0.9`，与整合包 6AAM 相同；不等同于新增一个严格比例导航制导律。通过初始化钩子和低频审计覆盖当前载荷与池化武器，仅修改 PW 私有导弹类。
+
+针对“只有 PW 卡顿”，工具对匹配的原驾驶舱雷达执行版本锁定的源码替换：外部相机远离时暂停私人雷达，找不到 HUD 源时限频扫描。自动收集 PW 回调及原生相机原函数耗时。**卡顿主因和改善幅度仍待实飞确认**。
+
+第二版是第一版之上的独立事务，需要保留同一 `hotfixes/pw-input/results` 和 `backups`。全新安装请按以下顺序，避免用新 DLL 冒充第一版构建：
+
+1. 检出第一版提交 `c45b7fb31aa8fd3fb29479ee57ed96d335463e38`，运行 `native/build.cmd`，再运行 `hotfixes/pw-input/apply.ps1`。原版 PW-MkI 必须匹配上述版本及工具要求的哈希。
+2. 切回 `main` 并重新构建 `native/build.cmd`；保留步骤 1 的外部部署记录和备份。
+3. 进入 `hotfixes/pw-input`，运行 `python tools/deploy_revision2.py prepare`，核对后运行 `python tools/deploy_revision2.py apply`；运行 `python tools/deploy_revision2.py check` 检查实际部署。
+4. 回退时先运行 `rollback-revision2.ps1` 恢复第一版，再按需运行原 `rollback.ps1`。第二版应用期间第一版工具会因哈希不同拒绝直接回滚，不能跳过顺序。
+
+工具不分发完整的 PW `main.lua` 或驾驶舱雷达脚本，只对使用者本地的精确匹配版本生成补丁；三个新 Lua 辅助模块为本修订原创代码。
+
+第二版新验证：11 项 Lua 策略/统计/雷达测试及 6 项部署事务测试通过；连同第一版共 60 项 Python 测试通过。公开环境缺少匹配的原始雷达时会明确跳过相应集成项。5 组与此次修改相关的原生回归、x64 编译和接口兼容检查通过；启动器校验与预检通过。实际游戏验收仍待完成。
