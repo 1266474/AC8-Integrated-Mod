@@ -1,7 +1,8 @@
--- Use the same native lead/proportional-tracking setting as Integrated 6AAM.
+-- MSL lead tracking plus QAAM turn limits from Integrated full missile mode.
 -- No scripted steering loop; native FCS keeps target, ammo, reload and flight.
 if PWBLMUGuidanceHotfix then return PWBLMUGuidanceHotfix end
-local M={value=.9,changed=0,failures=0}
+local M={value=1,changed=0,failures=0}
+local policy={{'HomingForesightAmount',1,0,2},{'MaxRotationAngle',150,0,180},{'MaxHomingAngle',160,0,180}}
 PWBLMUGuidanceHotfix=M
 local registry=assert(PWActorRegistryV21,'PW actor registry unavailable')
 local kinds={'BP_PW_BLMU_C','BP_PW_WingmanBLMU_V58_C'}
@@ -11,17 +12,28 @@ local function name(o)return valid(o)and o:GetClass():GetFName():ToString()or''e
 local function finite(n)return type(n)=='number'and n==n and math.abs(n)<math.huge end
 function M.apply(w)
  if not valid(w)or not allowed[name(w)]then return false end
- local old=w.HomingForesightAmount
- assert(finite(old)and old>=0 and old<=2,'Unexpected BLMU HomingForesightAmount')
- if math.abs(old-M.value)<1e-6 then return false end
+ local old={};local changed=false
+ -- Validate every field before writing any field.
+ for i,p in ipairs(policy)do
+  local v=w[p[1]];assert(finite(v)and v>=p[3]and v<=p[4],'Unexpected BLMU '..p[1])
+  old[i]=v;if math.abs(v-p[2])>=1e-6 then changed=true end
+ end
+ if not changed then return false end
  local ok,err=pcall(function()
-  w.HomingForesightAmount=M.value
-  assert(finite(w.HomingForesightAmount)and math.abs(w.HomingForesightAmount-M.value)<1e-6,'BLMU guidance readback mismatch')
+  for _,p in ipairs(policy)do
+   if math.abs(w[p[1]]-p[2])>=1e-6 then w[p[1]]=p[2]end
+   assert(finite(w[p[1]])and math.abs(w[p[1]]-p[2])<1e-6,'BLMU guidance readback mismatch: '..p[1])
+  end
  end)
  if not ok then
-  -- The setter may mutate before raising. Restore only this owned scalar.
-  local restored,why=pcall(function()w.HomingForesightAmount=old;assert(w.HomingForesightAmount==old)end)
-  error(tostring(err)..(restored and' (restored)'or' (restore failed: '..tostring(why)..')'))
+  -- A setter may mutate before raising; attempt every owned field on rollback.
+  local errors={}
+  for i=#policy,1,-1 do
+   local key=policy[i][1]
+   local restored,why=pcall(function()if w[key]~=old[i]then w[key]=old[i]end;assert(w[key]==old[i])end)
+   if not restored then errors[#errors+1]=tostring(why)end
+  end
+  error(tostring(err)..(#errors==0 and' (restored)'or' (restore failed: '..table.concat(errors,';')..')'))
  end
  M.changed=M.changed+1
  return true
@@ -59,5 +71,5 @@ RegisterHook('/Script/Live.LiveWeaponBase:OnInitialized',initialized)
 RegisterHook('/Script/Live.LiveWeaponBase:OnCreateWeapon_BP',initialized)
 RegisterBeginPlayPostHook(initialized)
 M.loop=LoopInGameThreadWithDelay(1000,function()guarded(M.refresh);return false end)
-print('[PW BLMU guidance] native HomingForesightAmount=0.9; private SP missiles only\n')
+print('[PW BLMU guidance] MSL lead=1.0; QAAM MaxRotationAngle=150 MaxHomingAngle=160; private SP missiles only\n')
 return M

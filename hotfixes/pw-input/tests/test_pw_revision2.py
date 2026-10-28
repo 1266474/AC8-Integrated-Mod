@@ -8,14 +8,14 @@ except ImportError:
 
 ROOT=Path(__file__).resolve().parents[1]
 def runtime():
-    if LuaRuntime is None:raise unittest.SkipTest('Install optional Lupa to execute actual Lua policies.')
+    if LuaRuntime is None:raise unittest.SkipTest("Install optional Lupa for Lua tests.")
     lua=LuaRuntime(unpack_returned_tuples=True)
     lua.execute('''
 print=function()end
 hooks={}; loops={}; actors={}; configs={}
 function valid()return true end
 function weapon(kind,value)
- local o={HomingForesightAmount=value,Ammo=42,SpeedMaximum=1234,bIsHoming=true}
+ local o={HomingForesightAmount=value,MaxRotationAngle=40,MaxHomingAngle=75,Ammo=42,SpeedMaximum=1234,bIsHoming=true}
  function o:IsValid()return true end
  function o:IsActorBeingDestroyed()return false end
  function o:GetClass()return {GetFName=function()return {ToString=function()return kind end}end}end
@@ -40,7 +40,8 @@ class Guidance(unittest.TestCase):
     def test_private_player_and_wingman_only(self):
         self.lua.execute('''
 for _,kind in ipairs({'BP_PW_BLMU_C','BP_PW_WingmanBLMU_V58_C'})do
- local w=weapon(kind,0);assert(M.apply(w));assert(w.HomingForesightAmount==.9)
+ local w=weapon(kind,0);assert(M.apply(w));assert(w.HomingForesightAmount==1)
+ assert(w.MaxRotationAngle==150 and w.MaxHomingAngle==160)
  assert(w.Ammo==42 and w.SpeedMaximum==1234 and w.bIsHoming==true)
  assert(not M.apply(w))
 end
@@ -60,19 +61,32 @@ assert(not M.apply(nil));assert(not M.apply({IsValid=function()return false end}
 local c=weapon('BP_PW_BLMU_C',.1);configs[1]={WeaponClassDefaultObject=c}
 local w=weapon('BP_PW_BLMU_C',0);actors.BP_PW_BLMU_C={w}
 assert(loops[1].interval==1000 and loops[1].fn()==false)
-assert(c.HomingForesightAmount==.9 and w.HomingForesightAmount==.9)
+assert(c.HomingForesightAmount==1 and w.HomingForesightAmount==1)
 w.HomingForesightAmount=0
 hooks['/Script/Live.LiveWeaponBase:OnInitialized']({get=function()return w end})
-assert(w.HomingForesightAmount==.9)
+assert(w.HomingForesightAmount==1)
 configs[1]={WeaponClassDefaultObject=weapon('BP_PW_BLMU_C',0)}
-M.refresh();assert(configs[1].WeaponClassDefaultObject.HomingForesightAmount==.9)
+M.refresh();assert(configs[1].WeaponClassDefaultObject.HomingForesightAmount==1)
 ''')
     def test_setter_failure_restores_scalar(self):
         self.lua.execute('''
 local w=weapon('BP_PW_BLMU_C',nil);local v=.2
 setmetatable(w,{__index=function(_,k)if k=='HomingForesightAmount'then return v end end,
- __newindex=function(t,k,x)if k=='HomingForesightAmount'then v=x;if x==.9 then error('setter failed after mutation')end else rawset(t,k,x)end end})
+ __newindex=function(t,k,x)if k=='HomingForesightAmount'then v=x;if x==1 then error('setter failed after mutation')end else rawset(t,k,x)end end})
 assert(not pcall(M.apply,w));assert(v==.2)
+''')
+
+    def test_invalid_turn_limit_prevents_all_writes(self):
+        self.lua.execute('''
+local w=weapon('BP_PW_BLMU_C',.9);w.MaxRotationAngle=0/0
+assert(not pcall(M.apply,w));assert(w.HomingForesightAmount==.9 and w.MaxHomingAngle==75)
+''')
+    def test_second_setter_failure_restores_all_fields(self):
+        self.lua.execute('''
+local w=weapon('BP_PW_BLMU_C',.9);w.MaxRotationAngle=nil;local angle=40
+setmetatable(w,{__index=function(_,k)if k=='MaxRotationAngle'then return angle end end,
+ __newindex=function(t,k,x)if k=='MaxRotationAngle'then angle=x;if x==150 then error('turn setter failure')end else rawset(t,k,x)end end})
+assert(not pcall(M.apply,w));assert(w.HomingForesightAmount==.9 and angle==40 and w.MaxHomingAngle==75)
 ''')
 
 class Profiler(unittest.TestCase):
