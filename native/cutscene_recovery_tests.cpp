@@ -92,7 +92,7 @@ int main(){
  free_look.reset();mouse_delta.clear();target_pitch=0;target_yaw=0;
  auto stage=[](uintptr_t pawn_,ULONGLONG age){HudFrame f;f.pawn=pawn_;f.tick=fixture_now-age;f.fov=77.5f;f.ox=-3000;f.oz=600;stage_hud_frame(f);};
  auto stale_final=[]{HudFrame f;f.pawn=P;f.tick=fixture_now-400;f.fov=77.5f;publish_hud_frame(f);};
- auto moved=[](int dx){const float y0=target_yaw.load();mouse_delta.add(dx,0);target_input_tick();return std::abs(target_yaw.load()-y0)>1e-4f;};
+ auto moved=[](int dx){const float y0=target_yaw.load();mouse_delta.add_if(mouse_delta.token(),dx,0,[]{return true;});target_input_tick();return std::abs(target_yaw.load()-y0)>1e-4f;};
  fixture_now+=1000;stale_final();stage(P,0);
  assert(moved(20));                                     // fallback keeps the mouse alive
  stage(P,300);assert(!moved(20));                       // both snapshots stale: rejected, delta dropped

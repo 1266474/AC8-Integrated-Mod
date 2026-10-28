@@ -146,8 +146,8 @@ if EngineTickAvailable == false or type(LoopInGameThreadAfterFrames) ~= "functio
 else
     LoopInGameThreadAfterFrames(1, function()
         begin_native()
-        helmet_state() -- invalidate a disabled/suspended mode even without a pawn
         local ok, err = pcall(function()
+            helmet_state() -- invalidate a disabled/suspended mode even without a pawn
             local now = os.time()
             if now < next_search then return end
             local pawn, controller = player_plane()
@@ -320,6 +320,9 @@ else
             next_search = os.time() + 1
             notice("Recovering after runtime error: " .. tostring(err))
         end
+        -- Finish after native HUD work and error recovery, including early
+        -- returns inside the protected callback. Uses the same native export.
+        begin_native(1)
     end)
     notice("Loaded. Offline controller will activate after entering a mission.")
 end

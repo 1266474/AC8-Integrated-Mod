@@ -12,6 +12,9 @@ struct PerfCounter {
     }
 };
 PerfCounter perf_script,perf_bridge,perf_camera,perf_frame_gap;
+PerfCounter perf_raw_callback,perf_raw_input_wait,perf_fallback_plan,perf_exact_solver;
+PerfCounter perf_lua_callback;
+std::atomic<unsigned long long> perf_unfinished_callbacks{0};
 std::atomic<unsigned long long> perf_other_inputs{0},perf_player_inputs{0},perf_hitches{0};
 LARGE_INTEGER perf_frequency{};
 unsigned long long perf_clock() {
@@ -25,9 +28,11 @@ struct PerfSpan {
     PerfCounter& counter;
     unsigned long long start;
     explicit PerfSpan(PerfCounter& c):counter(c),start(perf_enabled.load()?perf_clock():0) {}
+    PerfSpan(PerfCounter& c,bool collect):counter(c),start(collect?perf_clock():0) {}
     ~PerfSpan() { if(start) counter.add(perf_us(perf_clock()-start)); }
 };
 unsigned long long script_start=0,previous_frame_start=0; // Game-thread only.
+unsigned long long callback_start=0; // Paired begin()/begin(1), game-thread only.
 
 struct LogRecord { unsigned long long tick=0; char message[1024]{}; };
 std::array<LogRecord,64> log_queue;
@@ -96,6 +101,13 @@ void logger_loop() {
             report_counter("native_bridge",perf_bridge,emit);
             report_counter("camera_own_work",perf_camera,emit);
             report_counter("frame_gap",perf_frame_gap,emit);
+            report_counter("raw_data_callback_sampled_1of64",perf_raw_callback,emit);
+            report_counter("raw_inbox_wait_sampled_1of64",perf_raw_input_wait,emit);
+            report_counter("fallback_plan",perf_fallback_plan,emit);
+            report_counter("exact_solver",perf_exact_solver,emit);
+            report_counter("lua_callback_wall",perf_lua_callback,emit);
+            const auto unfinished=perf_unfinished_callbacks.exchange(0);
+            if(emit||unfinished)log_line("PERF lua_callback_unfinished=%llu (missing finish, incomplete samples excluded)",unfinished);
             const auto other=perf_other_inputs.exchange(0),player=perf_player_inputs.exchange(0);
             const auto hitches=perf_hitches.exchange(0),dropped=dropped_logs.exchange(0);
             if(emit || dropped) log_line("PERF input_player=%llu input_other=%llu gaps_over_50ms=%llu dropped_logs=%llu",player,other,hitches,dropped);

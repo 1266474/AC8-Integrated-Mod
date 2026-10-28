@@ -117,7 +117,7 @@ int main(){
  target_pitch=60;target_yaw=-120;command_pitch=.8f;command_roll=.5f;command_yaw=.2f;
  update_commands();assert(command_pitch==0&&command_roll==0&&command_yaw==0&&transition_center_requested);
  double pose[13]={65536,10,30,0,10,30,0,80,-3000,0,600,0,0};
- context_suspended=false;resume_center_requested=true;mouse_delta.add(500,500);
+ context_suspended=false;resume_center_requested=true;mouse_delta.add_if(mouse_delta.token(),500,500,[]{return true;});
  receive_pose(pose);
  assert(!transition_center_requested&&!resume_center_requested);
  assert(std::abs(target_pitch.load()-10)<.001&&std::abs(target_yaw.load()-30)<.001);
@@ -125,10 +125,10 @@ int main(){
  pose[12]=1;receive_pose(pose);pose[1]=20;pose[2]=40;pose[12]=0;receive_pose(pose);
  assert(std::abs(target_pitch.load()-10)<.001&&std::abs(target_yaw.load()-30)<.001);
  // Actual C key uses the same controller orbit for short and long holds.
- fixture_c=true;manual_camera_active=true;mouse_delta.add(90,90);receive_pose(pose);
- mouse_delta.add(50,0);receive_pose(pose);
+ fixture_c=true;manual_camera_active=true;mouse_delta.add_if(mouse_delta.token(),90,90,[]{return true;});receive_pose(pose);
+ mouse_delta.add_if(mouse_delta.token(),50,0,[]{return true;});receive_pose(pose);
  assert(std::abs(target_yaw.load()-30)<.001&&std::abs(look_yaw.load()-target_yaw.load())>1);
- fixture_c=false;mouse_delta.add(90,90);receive_pose(pose);
+ fixture_c=false;mouse_delta.add_if(mouse_delta.token(),90,90,[]{return true;});receive_pose(pose);
  assert(std::abs(target_pitch.load()-10)<.001&&std::abs(target_yaw.load()-30)<.001);manual_camera_active=false;
  // Switching camera profiles alone must not recenter the flight target.
  camera_view_mode=0;receive_pose(pose);camera_view_mode=1;receive_pose(pose);
@@ -151,14 +151,14 @@ int main(){
  HudFrame fresh;fresh.pawn=aircraft.load();fresh.tick=GetTickCount64();fresh.cp=10;fresh.cy=30;fresh.fov=80;fresh.ox=-3000;fresh.oz=600;
  publish_hud_frame(fresh);free_look.reset();
  const auto source_before=hud_source_sequence.load();const float before_yaw=target_yaw.load(),before_command=command_yaw.load();
- for(int i=0;i<12;++i){mouse_delta.add(2,0);target_input_tick();}
+ for(int i=0;i<12;++i){mouse_delta.add_if(mouse_delta.token(),2,0,[]{return true;});target_input_tick();}
  const float new_yaw=target_yaw.load();assert(std::abs(new_yaw-before_yaw)>.1f);
  assert(hud_source_sequence==source_before&&command_yaw==before_command);
  target_input_tick();assert(std::abs(target_yaw.load()-new_yaw)<.0001f); // no duplicate delta consumption
  receive_pose(pose);assert(std::abs(target_yaw.load()-new_yaw)<.0001f); // controller consumes same goal
- fixture_c=true;target_input_tick();mouse_delta.add(50,0);target_input_tick();
+ fixture_c=true;target_input_tick();mouse_delta.add_if(mouse_delta.token(),50,0,[]{return true;});target_input_tick();
  assert(std::abs(target_yaw.load()-new_yaw)<.0001f);fixture_c=false;target_input_tick();
- context_suspended=true;mouse_delta.add(100,100);target_input_tick();assert(std::abs(target_yaw.load()-new_yaw)<.0001f);
+ context_suspended=true;mouse_delta.add_if(mouse_delta.token(),100,100,[]{return true;});target_input_tick();assert(std::abs(target_yaw.load()-new_yaw)<.0001f);
  context_suspended=false;independent_mouse=false;
  puts("PASS independent target updates without new pose/control steps, shared target consumption, no double deltas, C retention and suspension guards");
  // Display prediction cannot mutate the real command, target, camera or policy.
@@ -182,17 +182,17 @@ int main(){
  active=true;enabled=true;recenter_requested=false;resume_center_requested=false;transition_center_requested=false;
  free_look.reset();mouse_delta.clear();target_pitch=0;target_yaw=0;fixture_c=false;
  double synced_pose[13]={65536,0,0,0,0,0,0,62,0,0,0,0,0};
- mouse_delta.add(10,0);mouse_delta.add(15,0);target_input_tick();assert(target_yaw.load()==0);
+ mouse_delta.add_if(mouse_delta.token(),10,0,[]{return true;});mouse_delta.add_if(mouse_delta.token(),15,0,[]{return true;});target_input_tick();assert(target_yaw.load()==0);
  receive_pose(synced_pose);float synced_yaw=target_yaw.load();assert(synced_yaw>0);
  HudFrame staged;assert(read_pending_hud_frame(staged)&&staged.ty==synced_yaw&&staged.tp==target_pitch.load());
  assert(mouse_delta.take().x==0);receive_pose(synced_pose);assert(target_yaw.load()==synced_yaw);
- fixture_c=true;receive_pose(synced_pose);mouse_delta.add(50,0);receive_pose(synced_pose);assert(target_yaw.load()==synced_yaw);
- fixture_c=false;mouse_delta.add(30,0);receive_pose(synced_pose);assert(target_yaw.load()==synced_yaw);
+ fixture_c=true;receive_pose(synced_pose);mouse_delta.add_if(mouse_delta.token(),50,0,[]{return true;});receive_pose(synced_pose);assert(target_yaw.load()==synced_yaw);
+ fixture_c=false;mouse_delta.add_if(mouse_delta.token(),30,0,[]{return true;});receive_pose(synced_pose);assert(target_yaw.load()==synced_yaw);
  puts("PASS frame-owned packet consumption, exact staged goal, no duplicate input and C target retention");
  auto original_bindings=keybindings.load();auto new_bindings=custom_keys::defaults;new_bindings[0]='V';new_bindings[1]=VK_XBUTTON1;keybindings=custom_keys::pack(new_bindings);
  fixture_c=true;fixture_rmb=true;assert(!bound_key_down(custom_keys::Action::FreeLook)&&!bound_key_down(custom_keys::Action::Zoom));
  fixture_keys['V']=true;fixture_keys[VK_XBUTTON1]=true;assert(bound_key_down(custom_keys::Action::FreeLook)&&bound_key_down(custom_keys::Action::Zoom));
- free_look.reset();receive_pose(synced_pose);mouse_delta.add(40,0);receive_pose(synced_pose);assert(target_yaw.load()==synced_yaw); // remapped free look preserves actual flight goal
+ free_look.reset();receive_pose(synced_pose);mouse_delta.add_if(mouse_delta.token(),40,0,[]{return true;});receive_pose(synced_pose);assert(target_yaw.load()==synced_yaw); // remapped free look preserves actual flight goal
  fixture_keys['V']=false;fixture_keys[VK_XBUTTON1]=false;fixture_c=false;fixture_rmb=false;keybindings=original_bindings;
  puts("PASS runtime remapped free-look and zoom predicates ignore old C/RMB; frame integration retains the flight goal");
  CustomZoomEnvelope optical;float zoom=62;for(int i=0;i<8;++i){zoom=optical.step(62,1.75f,true,1.f/60);assert(zoom==62);}

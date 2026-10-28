@@ -184,7 +184,7 @@ std::atomic<float> view_fov{100};
 std::atomic<float> view_offset_x{0}, view_offset_y{0}, view_offset_z{0};
 std::atomic<float> roll_reference{0};
 std::atomic<unsigned long long> pose_tick{0};
-PairedMouse mouse_delta;
+MouseInputInbox mouse_delta;
 std::atomic<float> command_pitch{0}, command_roll{0}, command_yaw{0};
 std::atomic<float> target_pitch{0}, target_yaw{0};
 // Camera destination is independent of the flight target while C is held.
@@ -347,17 +347,29 @@ bool foreground_is_game() {
 
 UINT WINAPI capture_get_raw_input_data(HRAWINPUT input, UINT command, LPVOID data,
                                        PUINT size, UINT header_size) {
+    // F5 diagnostics sample one payload-bearing RID_INPUT callback in 64,
+    // including the original API and inbox-lock wait. Size-only queries must
+    // not align the sampler to the non-payload half of a recurring API pair.
+    // No formatting or disk I/O occurs in the input callback.
+    static thread_local unsigned sample_sequence=0;
+    const bool sampled=perf_enabled.load(std::memory_order_relaxed)&&command==RID_INPUT&&data&&((++sample_sequence&63u)==0);
+    PerfSpan callback_timing(perf_raw_callback,sampled);
+    // Every API invocation owns a local token. A size-only query never queues
+    // input and its token is not reused by the later payload-bearing call.
+    const auto input_generation=mouse_delta.token();
     const UINT result = original_get_raw_input_data(input, command, data, size, header_size);
     if (result != static_cast<UINT>(-1) && command == RID_INPUT && data &&
         result >= sizeof(RAWINPUTHEADER) + sizeof(RAWMOUSE)) {
         const auto* raw = static_cast<const RAWINPUT*>(data);
         if (raw->header.dwType == RIM_TYPEMOUSE &&
             !(raw->data.mouse.usFlags & MOUSE_MOVE_ABSOLUTE) &&
-            foreground_is_game() && active.load() && enabled.load()) {
+            active.load() && enabled.load()) {
             if(!game_paused.load() && !gaze_active.load() && !context_suspended.load()) {
-                std::lock_guard<std::recursive_mutex> lock(target_mutex);
-                mouse_delta.add(raw->data.mouse.lLastX,raw->data.mouse.lLastY);
-                if(raw->data.mouse.lLastX||raw->data.mouse.lLastY){rate_raw_move.fetch_add(1,std::memory_order_relaxed);raw_gaps.event(hud_qpc(),hud_frequency());}
+                const auto wait_start=sampled?perf_clock():0;
+                const bool accepted=mouse_delta.add_if(input_generation,raw->data.mouse.lLastX,raw->data.mouse.lLastY,
+                    []{return active.load()&&enabled.load()&&!game_paused.load()&&!gaze_active.load()&&!context_suspended.load()&&foreground_is_game();},
+                    [&]{if(sampled)perf_raw_input_wait.add(perf_us(perf_clock()-wait_start));});
+                if(accepted&&(raw->data.mouse.lLastX||raw->data.mouse.lLastY)){rate_raw_move.fetch_add(1,std::memory_order_relaxed);raw_gaps.event(hud_qpc(),hud_frequency());}
             }
         }
     }
@@ -409,7 +421,7 @@ bool prepare_mouse() {
 
 void mouse_loop() {
     HANDLE input_timer=CreateWaitableTimerExW(nullptr,nullptr,0x2,TIMER_ALL_ACCESS);
-    log_line("INPUT_SOURCE Raw Input preferred; frame-synchronous goal consumption; worker captures only; DirectInput fallback only if raw hook unavailable");
+    log_line("INPUT_SOURCE Raw Input preferred; INPUT_INBOX_FIX=1 controller-lock-isolated producers; frame-synchronous goal consumption; worker captures only; DirectInput fallback only if raw hook unavailable; F5 payload timing sample=1/64");
     bool f8_down = false, f9_down = false;
     while (running.load()) {
         // Independent consumption does not require replacing the proven capture source.
@@ -417,10 +429,11 @@ void mouse_loop() {
         // The game frame owns goal integration; keep the high-rate producer.
         independent_mouse=false;
         if(!raw_input_hooked.load()&&(mouse_device||prepare_mouse())){
+            const auto input_generation=mouse_delta.token();
             DIMOUSESTATE2 state{};HRESULT result=mouse_device->GetDeviceState(sizeof(state),&state);
             if(SUCCEEDED(result)){
-                std::lock_guard<std::recursive_mutex> lock(target_mutex);
-                if(foreground_is_game()&&active.load()&&enabled.load()&&!game_paused.load()&&!gaze_active.load()&&!context_suspended.load())mouse_delta.add(state.lX,state.lY);
+                mouse_delta.add_if(input_generation,state.lX,state.lY,
+                    []{return active.load()&&enabled.load()&&!game_paused.load()&&!gaze_active.load()&&!context_suspended.load()&&foreground_is_game();});
             }else mouse_device->Acquire();
         }
         rate_input_poll.fetch_add(1,std::memory_order_relaxed);
@@ -655,7 +668,10 @@ void update_commands() {
         target_references[1].update(goal_roll_rate,std::abs(pose_pitch.load())<60.f,dt,roll_speed),
         ref_yaw};
     if(capture_schedule.leveling)references[1]*=1-capture_mix; // Synthetic leveling is not moving-target feedforward.
-    if(!manual)apply_model_control(pitch_error,roll_error,yaw_error,filtered_pitch_rate,filtered_roll_rate,filtered_yaw_rate,-dot(omega,b.r),-dot(omega,b.f),dot(omega,b.u),dt,pcmd,rcmd,ycmd,roll_speed,references,{f,right,up},{b.f.z,b.r.z,b.u.z},b,std::acos(std::clamp(dot(goal_before_input,aim),-1.f,1.f))/rad);else reset_model_assist();
+    if(!manual){
+        PerfSpan fallback_timing(perf_fallback_plan);
+        apply_model_control(pitch_error,roll_error,yaw_error,filtered_pitch_rate,filtered_roll_rate,filtered_yaw_rate,-dot(omega,b.r),-dot(omega,b.f),dot(omega,b.u),dt,pcmd,rcmd,ycmd,roll_speed,references,{f,right,up},{b.f.z,b.r.z,b.u.z},b,std::acos(std::clamp(dot(goal_before_input,aim),-1.f,1.f))/rad);
+    }else reset_model_assist();
     command_pitch.store(manual?0:pcmd*config.pitch_sign);
     command_yaw.store(manual?0:ycmd*config.yaw_sign);
     command_roll.store(manual?0:rcmd*config.roll_sign);
@@ -833,7 +849,11 @@ uintptr_t __fastcall process_input(unsigned char* state, unsigned char* context)
     fe_runtime::Command exact{};
     const int mode_now=control_mode.load();
     if(override_input&&control_modes::exact(mode_now)){
+        // This function contains SEH blocks: keep timing POD-only here rather
+        // than introducing an RAII destructor (MSVC C2712).
+        const auto exact_start=perf_enabled.load()?perf_clock():0;
         exact=fe_runtime::compute(pawn,context,mode_now,perf_us(perf_clock()));
+        if(exact_start)perf_exact_solver.add(perf_us(perf_clock()-exact_start));
         // Log degraded periods that last >= 30 frames (~0.5 s), not momentary gaps (focus changes, respawn).
         static int bad_frames=0;
         if(!exact.valid){if(++bad_frames==30)log_line("WAR_DEGRADED v11.1 fallback reason=%d",exact.reason);}
@@ -1081,10 +1101,24 @@ extern "C" __declspec(dllexport) int ac8_mouseaim_canvas_report(lua_State* state
     if(v[0]!=24||elapsed<0||elapsed>1000)return 0;
     ++canvas_counts.drawn;canvas_counts.lines+=24;canvas_counts.cost_ms+=elapsed;canvas_counts.max_ms=std::max(canvas_counts.max_ms,elapsed);return 0;
 }
-extern "C" __declspec(dllexport) int ac8_mouseaim_begin(void*) {
+extern "C" __declspec(dllexport) int ac8_mouseaim_begin(lua_State* state) {
     if(!running.load()) return 0;
     if(!bridge_thread) bridge_thread=GetCurrentThreadId();
     if(!on_bridge_thread()) return 0;
+    // Native regression fixtures historically call begin(nullptr). Keep that
+    // no-argument entry usable without loading the delayed UE4SS Lua imports.
+    if(state){
+        LuaView lua(state);
+        if(lua.get_stack_size()!=0){
+            double args[1]{};if(!read_numbers(lua,args)||args[0]!=1)return 0;
+            // Optional finish operation shares the original export/ABI. The paired
+            // Lua callback calls this after HUD work and runtime-error recovery.
+            if(callback_start){perf_lua_callback.add(perf_us(perf_clock()-callback_start));callback_start=0;}
+            return 0;
+        }
+    }
+    if(callback_start)perf_unfinished_callbacks.fetch_add(1,std::memory_order_relaxed);
+    callback_start=perf_enabled.load()?perf_clock():0;
     rate_bridge.fetch_add(1,std::memory_order_relaxed);
     if(hud_renderer.load()==2||hud_renderer.load()==3){
         auto now=GetTickCount64();if(!canvas_counts.since)canvas_counts.since=now;
@@ -1143,9 +1177,9 @@ extern "C" __declspec(dllexport) int ac8_mouseaim_context(lua_State* state){
 }
 
 extern "C" __declspec(dllexport) int ac8_mouseaim_frame(lua_State* state) {
+    PerfSpan timing(perf_bridge); // Includes any controller-lock wait.
     std::lock_guard<std::recursive_mutex> lock(target_mutex);
     if(!running.load() || !on_bridge_thread()) return 0;
-    PerfSpan timing(perf_bridge);
     LuaView lua(state); double v[13]{};
     if(!read_numbers(lua,v) || !live_pointer_number(v[0])) { release_controls(); return 0; }
     for(size_t i=1;i<11;++i) if(std::abs(v[i])>1e12) { release_controls(); return 0; }

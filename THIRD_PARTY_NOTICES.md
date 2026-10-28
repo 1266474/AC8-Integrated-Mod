@@ -23,6 +23,10 @@ No ACE COMBAT game executable, mesh, texture, audio, extracted asset package, de
 
 The root license does not replace the individual third-party licenses. Preserve this file and all applicable license files in redistributed packages. This is an unofficial community project and is not affiliated with the game publisher or the upstream projects.
 
+## Local PW-MkI compatibility and input hotfix candidate
+
+The new original tools in `hotfixes/pw-input/` and the local input-queue modifications use the root MIT license. Existing upstream notices and third-party licenses remain unchanged. The PW-MkI patch tool transforms a user's separately obtained, version-pinned local files; this repository does not bundle or relicense the original or patched PW-MkI DLL, its loader distribution, or aircraft/game assets. No endorsement by the PW-MkI author is implied. The optional Lupa test dependency is installed separately and is not vendored.
+
 ## CreeperUX UI Kit native visual adaptation (local GUI preview)
 
 Design tokens and component conventions: CreeperUX/CreeperUX-UI-Kit 2.4.0, commit 586e23784d8f51cbe8713e583bcf0d92c473f2d0. The GUI is a WPF adaptation. Provenance is in package-template/ui/creeperux/SOURCE.json.

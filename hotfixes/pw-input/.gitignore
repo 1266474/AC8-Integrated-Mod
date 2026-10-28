@@ -1,0 +1,6 @@
+backups/
+results/
+patches/
+.venv*/
+__pycache__/
+**/__pycache__/
